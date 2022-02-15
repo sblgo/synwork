@@ -1,0 +1,55 @@
+synwork {
+    required_processor  {
+        source = "sbl.systems/sappi/pidir"
+        version = ""
+    }
+    required_processor  {
+        source = "csv"
+        version = ""
+    }
+
+ }
+
+
+processor "csv" "csv01" {
+
+}
+
+method "read" "csv01" "csv_file01" {
+    file_name = "/home/christof/git/synwork/synwork/test_env/pidir_01/cc.csv"
+    delimiter = "|"
+    column {
+        name = "party"
+        column = 1
+    }
+    column {
+        name = "service"
+        column = 2
+    }
+    column {
+        name = "channel"
+        column = 3
+    }
+    additional {
+        name = "attributes"
+        from_column = 4
+        to_column = 0
+    }
+}
+
+processor "pidir" "pisystem" {
+    server = "http://o1e.svlfg"
+    proxy = {
+        server = "http://localhost:3124"
+    }
+}
+
+method "create_change_list" "pisystem" "change_list" {
+    name = "change_list_01"
+    description = "test from synwork 01"
+}
+
+method "channel_change_attributes" "pisystem" "change_attributes" {
+    data =  $method.csv_file01.data
+    change_list = $method.change_list.change_list
+}

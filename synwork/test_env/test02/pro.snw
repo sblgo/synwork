@@ -1,0 +1,39 @@
+
+synwork {
+    required_processor  {
+        source = "randlist"
+        version = ""
+    }
+    required_processor  {
+        source = "csv"
+        version = ""
+    }
+ }
+
+processor "randlist" "test01" {
+
+}
+
+processor "csv" "csv01" {
+
+}
+
+method "random_list" "test01" "list01" {
+    min_id = 2
+    max_id = 100
+    
+}
+
+
+method "write" "csv01" "csv_file01" {
+    data = $method.list01.result
+    file_name = "random.csv"
+    column {
+        path = "id"
+        format = "%05d"
+    }
+    column {
+        path = "value"
+        format= "%010d"
+    }
+}

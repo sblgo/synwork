@@ -1,0 +1,16 @@
+
+synwork {
+    required_processor  {
+        source = "randlist"
+        version = ""
+    }
+ }
+
+processor "randlist" "test01" {
+
+}
+
+method "random_list" "test01" "list01" {
+    
+}
+
