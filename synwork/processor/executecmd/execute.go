@@ -23,6 +23,9 @@ func (c *cmd) Eval(cf *cfg.Config, args []string) {
 		panic(err)
 	}
 	defer r.Shutdown()
+	if err = r.StartUp(runtime.RuntimeOptionsExec); err != nil {
+		panic(err)
+	}
 	ctx := context.Background()
 	r.Exec(ctx)
 }

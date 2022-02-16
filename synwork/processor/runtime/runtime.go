@@ -13,6 +13,7 @@ type Runtime struct {
 	dirName          string
 	portFrom, portTo int
 	Blocks           []*ast.BlockNode
+	pluginSources    []*PluginSource
 	plugins          map[string]*Plugin
 	processors       map[string]*Processor
 	variables        map[string]*Variable
@@ -21,29 +22,50 @@ type Runtime struct {
 	config           *cfg.Config
 }
 
-func NewRuntime(c *cfg.Config) (*Runtime, error) {
-	r := &Runtime{
-		dirName:    c.WorkDir,
-		plugins:    map[string]*Plugin{},
-		processors: map[string]*Processor{},
-		variables:  map[string]*Variable{},
-		methods:    map[string]*Method{},
-		portFrom:   c.PortFrom,
-		portTo:     c.PortTo,
-		config:     c,
-	}
-	if err := r.startUp(); err != nil {
-		return nil, err
+type RuntimeOption func(rt *Runtime) error
+
+var (
+	RuntimeOptionsInit = []RuntimeOption{
+		parse,
+		initPluginSource(func(ps *PluginSource) error { return ps.verifyAndLoadPlugin() }),
 	}
 
-	if err := r.buildExecPlan(); err != nil {
-		r.Shutdown()
-		return nil, err
+	RuntimeOptionsExec = []RuntimeOption{
+		parse,
+		initPluginSource(func(ps *PluginSource) error { return ps.verifyPlugin() }),
+		initVariable,
+		initPlugins,
+		initProcessors,
+		initMethods,
+		buildExecPlan,
+	}
+)
+
+func NewRuntime(c *cfg.Config) (*Runtime, error) {
+	r := &Runtime{
+		dirName:       c.WorkDir,
+		pluginSources: []*PluginSource{},
+		plugins:       map[string]*Plugin{},
+		processors:    map[string]*Processor{},
+		variables:     map[string]*Variable{},
+		methods:       map[string]*Method{},
+		portFrom:      c.PortFrom,
+		portTo:        c.PortTo,
+		config:        c,
 	}
 	return r, nil
 }
 
-func (r *Runtime) startUp() error {
+func (r *Runtime) StartUp(options []RuntimeOption) error {
+	for _, f := range options {
+		if err := f(r); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func parse(r *Runtime) error {
 	p, err := parser.NewParser(r.dirName)
 	if err != nil {
 		return err
@@ -53,21 +75,10 @@ func (r *Runtime) startUp() error {
 		return err
 	}
 	r.Blocks = p.Blocks
-
-	for _, f := range []func() error{
-		r.initVariable,
-		r.initPlugins,
-		r.initProcessors,
-		r.initMethods,
-	} {
-		if err = f(); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
-func (r *Runtime) initVariable() error {
+func initVariable(r *Runtime) error {
 	for _, b := range r.Blocks {
 		if b.Type == "variable" {
 			var name string
@@ -88,39 +99,59 @@ func (r *Runtime) initVariable() error {
 	return nil
 }
 
-func (r *Runtime) initPlugins() error {
-	for _, b := range r.Blocks {
-		if b.Type == "synwork" {
-			if obj, err := MapSchemaAndNode(PluginSchema, *b.Content); err != nil {
-				return err
-			} else {
-				if list, ok := obj.Value["required_processor"]; ok {
-					for _, plgl := range list.([]interface{}) {
-						plg := plgl.(map[string]interface{})
-						plgRuntime := &PluginRuntime{
-							Source:  plg["source"].(string),
-							Version: plg["version"].(string),
-							Config:  r.config,
-						}
-						if plgRun, err := plgRuntime.Start(r.portFrom, r.portTo); err != nil {
-							r.Shutdown()
-							return err
-						} else {
-							r.portFrom = plgRun.port + 1
-							if err = r.initPlugin(plgRun, b.Identifiers); err != nil {
-								r.Shutdown()
+func initPluginSource(factory func(ps *PluginSource) error) func(r *Runtime) error {
+	return func(r *Runtime) error {
+		for _, b := range r.Blocks {
+			if b.Type == "synwork" {
+				if obj, err := MapSchemaAndNode(PluginSchema, *b.Content); err != nil {
+					return err
+				} else {
+					if list, ok := obj.Value["required_processor"]; ok {
+						for _, plgl := range list.([]interface{}) {
+							plg := plgl.(map[string]interface{})
+							plgSource := &PluginSource{
+								Source:          plg["source"].(string),
+								VersionSelector: plg["version"].(string),
+								Config:          r.config,
+							}
+							if err := factory(plgSource); err != nil {
 								return err
+							} else {
+								r.pluginSources = append(r.pluginSources, plgSource)
 							}
 						}
 					}
 				}
 			}
 		}
+		return nil
 	}
+}
+
+func initPlugins(r *Runtime) error {
+	for _, b := range r.pluginSources {
+		plgRuntime := &PluginRuntime{
+			PluginKey:     b.PluginKey,
+			Config:        r.config,
+			pluginProgram: b.PluginProgram,
+		}
+		if plgRun, err := plgRuntime.Start(r.portFrom, r.portTo); err != nil {
+			r.Shutdown()
+			return err
+		} else {
+			r.portFrom = plgRun.port + 1
+			if err = r.initPlugin(plgRun); err != nil {
+				r.Shutdown()
+				return err
+			}
+		}
+
+	}
+
 	return nil
 }
 
-func (r *Runtime) initProcessors() error {
+func initProcessors(r *Runtime) error {
 	for _, b := range r.Blocks {
 		if b.Type == "processor" {
 			if len(b.Identifiers) != 2 {
@@ -147,7 +178,7 @@ func (r *Runtime) initProcessors() error {
 	return nil
 }
 
-func (r *Runtime) initMethods() error {
+func initMethods(r *Runtime) error {
 	for _, b := range r.Blocks {
 		if b.Type == "method" {
 			if len(b.Identifiers) != 3 {
@@ -188,7 +219,7 @@ func (r *Runtime) Shutdown() {
 	}
 }
 
-func (r *Runtime) initPlugin(plgRun *Plugin, ids []string) error {
+func (r *Runtime) initPlugin(plgRun *Plugin) error {
 	err := plgRun.Schema()
 	if err != nil {
 		return err
@@ -211,7 +242,7 @@ func (r *Runtime) addPlugin(plgRun *Plugin) error {
 	return nil
 }
 
-func (r *Runtime) buildExecPlan() error {
+func buildExecPlan(r *Runtime) error {
 	ep := &ExecPlan{
 		Processor:     map[string]*ExecPlanNode{},
 		TargetMethods: map[string]*ExecPlanNode{},
