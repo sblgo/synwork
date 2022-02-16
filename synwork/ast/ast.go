@@ -44,6 +44,11 @@ type FloatValue struct {
 	Value float64
 }
 
+type BoolValue struct {
+	Begin string
+	Value bool
+}
+
 type ReferenceValue struct {
 	Begin    string
 	RefParts []string
@@ -61,9 +66,11 @@ func (p *ComplexValue) Pos() string     { return p.Begin }
 func (p *ReferenceValue) Pos() string   { return p.Begin }
 func (p *IntValue) Pos() string         { return p.Begin }
 func (p *FloatValue) Pos() string       { return p.Begin }
+func (p *BoolValue) Pos() string        { return p.Begin }
 
 func (p *StringValue) Type() schema.SchemaType    { return schema.TypeString }
 func (p *ReferenceValue) Type() schema.SchemaType { return schema.TypeString }
 func (p *ComplexValue) Type() schema.SchemaType   { return schema.TypeMap }
 func (p *IntValue) Type() schema.SchemaType       { return schema.TypeInt }
 func (p *FloatValue) Type() schema.SchemaType     { return schema.TypeFloat }
+func (p *BoolValue) Type() schema.SchemaType      { return schema.TypeBool }

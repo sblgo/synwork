@@ -1,0 +1,36 @@
+
+processors {
+    required_processor  {
+        source = "pimon"
+        version = ""
+    }
+    required_processor {
+        source = "xslx"
+    }
+}
+
+provider "pimon" "pimon01" {
+    url = ""
+    user = ""
+    password = ""
+}
+
+provider "xslx" "xslx01" {
+    file = ""
+    path = {
+        x = ""
+    }
+}
+
+
+producer "pimon_messages" "pimon01" "msgl01"  {
+
+}
+
+processor "xslx_write" "xslx01" "xw01"  {
+
+}
+
+consumer "" {
+    
+}

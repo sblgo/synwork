@@ -19,7 +19,7 @@ processor "csv" "csv01" {
 }
 
 method "random_list" "test01" "list01" {
-    min_id = 2
+    min_id = -20
     max_id = 100
     
 }

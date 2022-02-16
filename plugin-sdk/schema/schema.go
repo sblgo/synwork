@@ -9,9 +9,10 @@ const (
 	TypeString    SchemaType = 1
 	TypeInt       SchemaType = 2
 	TypeFloat     SchemaType = 3
-	TypeMap       SchemaType = 4
-	TypeList      SchemaType = 5
-	TypeGeneric   SchemaType = 6
+	TypeBool      SchemaType = 4
+	TypeMap       SchemaType = 5
+	TypeList      SchemaType = 6
+	TypeGeneric   SchemaType = 7
 )
 
 type Schema struct {
