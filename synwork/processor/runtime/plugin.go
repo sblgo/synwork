@@ -16,6 +16,7 @@ type Plugin struct {
 	client    *rpc.Client
 	schema    map[string]*schema.Schema
 	methodMap map[string]*schema.Method
+	Provider  schema.Processor
 }
 
 func NewPlugin(port int, name string, source string) (*Plugin, error) {
@@ -54,6 +55,7 @@ func (p *Plugin) Schema() error {
 	err := p.client.Call("Plugin.Schema", dataIn, dataOut)
 	p.schema = dataOut.Provider.Schema
 	p.methodMap = dataOut.Provider.MethodMap
+	p.Provider = dataOut.Provider
 	return err
 }
 

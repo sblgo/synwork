@@ -3,7 +3,7 @@ HOSTNAME=sbl.systems
 NAMESPACE=synwork
 NAME=randlist
 BINARY=synwork-processor-${NAME}
-VERSION=0.1
+VERSION=0.0.1
 OS_ARCH=linux_amd64
 
 default: install

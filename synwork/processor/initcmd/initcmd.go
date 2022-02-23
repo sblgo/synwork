@@ -21,11 +21,14 @@ func (c *cmd) Eval(cf *cfg.Config, args []string) {
 	if err != nil {
 		panic(err)
 	}
-	r.Shutdown()
+	defer r.Shutdown()
+	if err = r.StartUp(runtime.RuntimeOptionsInit); err != nil {
+		panic(err)
+	}
 }
 
 func (c *cmd) parseArgs(args []string) {
-	fs := flag.NewFlagSet("execute", flag.PanicOnError)
+	fs := flag.NewFlagSet("initialize", flag.PanicOnError)
 	fs.StringVar(&c.DirName, "f", ".", "directory containing configuration files")
 	fs.Parse(args)
 }

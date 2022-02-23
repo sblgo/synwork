@@ -6,6 +6,7 @@ import (
 
 	"sbl.systems/go/synwork/synwork/processor/cfg"
 	"sbl.systems/go/synwork/synwork/processor/executecmd"
+	"sbl.systems/go/synwork/synwork/processor/helpcmd"
 	"sbl.systems/go/synwork/synwork/processor/initcmd"
 )
 
@@ -13,6 +14,7 @@ var cmds = []string{
 	"exec",
 	"execute",
 	"init",
+	"help",
 }
 
 func main() {
@@ -27,6 +29,9 @@ func main() {
 		cmd.Eval(cfg, args[1:])
 	case "init":
 		cmd := initcmd.NewCmd()
+		cmd.Eval(cfg, args[1:])
+	case "help":
+		cmd := helpcmd.NewCmd()
 		cmd.Eval(cfg, args[1:])
 	default:
 		panic(fmt.Errorf("unknown cmd %s", args[0]))

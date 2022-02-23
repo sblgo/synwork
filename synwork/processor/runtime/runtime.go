@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/go-version"
 	"sbl.systems/go/synwork/synwork/ast"
 	"sbl.systems/go/synwork/synwork/parser"
 	"sbl.systems/go/synwork/synwork/processor/cfg"
@@ -25,14 +26,40 @@ type Runtime struct {
 type RuntimeOption func(rt *Runtime) error
 
 var (
+	useLocalPlugins = func(ps *PluginSource) error {
+		if err := ps.verifyPlugin(); err != nil {
+			return err
+		}
+		if err := ps.selectPluginProgram(); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	updateLocalPlugins = func(ps *PluginSource) error {
+		if err := ps.verifyAndLoadPlugin(); err != nil {
+			return err
+		}
+		if err := ps.selectPluginProgram(); err != nil {
+			return err
+		}
+		return nil
+	}
+
 	RuntimeOptionsInit = []RuntimeOption{
 		parse,
-		initPluginSource(func(ps *PluginSource) error { return ps.verifyAndLoadPlugin() }),
+		initPluginSource(updateLocalPlugins),
+	}
+	RuntimeOptionsHelp = []RuntimeOption{
+		parse,
+		initPluginSource(updateLocalPlugins),
+		initVariable,
+		initPlugins,
 	}
 
 	RuntimeOptionsExec = []RuntimeOption{
 		parse,
-		initPluginSource(func(ps *PluginSource) error { return ps.verifyPlugin() }),
+		initPluginSource(useLocalPlugins),
 		initVariable,
 		initPlugins,
 		initProcessors,
@@ -109,10 +136,18 @@ func initPluginSource(factory func(ps *PluginSource) error) func(r *Runtime) err
 					if list, ok := obj.Value["required_processor"]; ok {
 						for _, plgl := range list.([]interface{}) {
 							plg := plgl.(map[string]interface{})
-							plgSource := &PluginSource{
-								Source:          plg["source"].(string),
-								VersionSelector: plg["version"].(string),
-								Config:          r.config,
+							source, versionSelector := plg["source"].(string), plg["version"].(string)
+							if versionSelector == "" {
+								versionSelector = ">=0.0.1"
+							}
+							plgSource, err := NewPluginSourceFromSource(r.config, source)
+							if err != nil {
+								return err
+							}
+							if cnstr, err := version.NewConstraint(versionSelector); err != nil {
+								return err
+							} else {
+								plgSource.VersionConstraint = cnstr
 							}
 							if err := factory(plgSource); err != nil {
 								return err
@@ -261,6 +296,14 @@ func buildExecPlan(r *Runtime) error {
 	r.execPlan = ep
 
 	return nil
+}
+
+func GetPlugins(set func(map[string]*Plugin)) func(r *Runtime) error {
+
+	return func(r *Runtime) error {
+		set(r.plugins)
+		return nil
+	}
 }
 
 func (r *Runtime) Exec(ctx context.Context) error {

@@ -5,6 +5,29 @@ import (
 	"sbl.systems/go/synwork/plugin-sdk/schema"
 )
 
+const (
+	csv_write_description = `write a csv file
+	the incoming data must be an array of objects with the same structure for each instance:
+	[
+		{
+			field1: "data",
+			field2: 03,
+			field4: "and so on"
+		},
+		{
+			field1: "data",
+			field2: 03,
+			field4: "and so on"
+		},
+		{
+			field1: "data",
+			field2: 03,
+			field4: "and so on"
+		}
+	]
+	`
+)
+
 var Opts = plugin.PluginOptions{
 	Provider: func() schema.Processor {
 		return schema.Processor{
@@ -44,8 +67,9 @@ var Opts = plugin.PluginOptions{
 							},
 						},
 					},
-					Result:   map[string]*schema.Schema{},
-					ExecFunc: csv_write,
+					Result:      map[string]*schema.Schema{},
+					ExecFunc:    csv_write,
+					Description: csv_write_description,
 				},
 				"read": {
 					Schema: map[string]*schema.Schema{

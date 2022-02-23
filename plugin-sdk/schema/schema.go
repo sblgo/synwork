@@ -25,3 +25,22 @@ type Schema struct {
 	Elem         map[string]*Schema
 	ElemType     SchemaType
 }
+
+var schemaTypeString = map[SchemaType]string{
+	TypeUndefined: "TypeUndefined",
+	TypeString:    "TypeString",
+	TypeInt:       "TypeInt",
+	TypeFloat:     "TypeFloat",
+	TypeBool:      "TypeBool",
+	TypeMap:       "TypeMap",
+	TypeList:      "TypeList",
+	TypeGeneric:   "TypeGeneric",
+}
+
+func (st SchemaType) String() string {
+	if v, ok := schemaTypeString[st]; ok {
+		return v
+	} else {
+		return "Undefined"
+	}
+}
