@@ -3,6 +3,8 @@ package runtime
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
 
 	"github.com/hashicorp/go-version"
 	"sbl.systems/go/synwork/synwork/ast"
@@ -21,6 +23,7 @@ type Runtime struct {
 	methods          map[string]*Method
 	execPlan         *ExecPlan
 	config           *cfg.Config
+	context          context.Context
 }
 
 type RuntimeOption func(rt *Runtime) error
@@ -68,7 +71,7 @@ var (
 	}
 )
 
-func NewRuntime(c *cfg.Config) (*Runtime, error) {
+func NewRuntime(ctx context.Context, c *cfg.Config) (*Runtime, error) {
 	r := &Runtime{
 		dirName:       c.WorkDir,
 		pluginSources: []*PluginSource{},
@@ -79,6 +82,7 @@ func NewRuntime(c *cfg.Config) (*Runtime, error) {
 		portFrom:      c.PortFrom,
 		portTo:        c.PortTo,
 		config:        c,
+		context:       ctx,
 	}
 	return r, nil
 }
@@ -170,7 +174,7 @@ func initPlugins(r *Runtime) error {
 			Config:        r.config,
 			pluginProgram: b.PluginProgram,
 		}
-		if plgRun, err := plgRuntime.Start(r.portFrom, r.portTo); err != nil {
+		if plgRun, err := plgRuntime.Start(r.context, r.portFrom, r.portTo); err != nil {
 			r.Shutdown()
 			return err
 		} else {
@@ -306,10 +310,22 @@ func GetPlugins(set func(map[string]*Plugin)) func(r *Runtime) error {
 	}
 }
 
-func (r *Runtime) Exec(ctx context.Context) error {
+func (r *Runtime) Dump(ctx context.Context) error {
 	ctx2 := &ExecContext{
 		Context:      ctx,
 		RuntimeNodes: map[string]*ExecRuntimeNode{},
+		Log:          *log.New(os.Stderr, "[SYNWORK-PLAN]", 0),
+	}
+	err := r.execPlan.Dump(ctx2)
+	return err
+}
+
+func (r *Runtime) Exec(ctx context.Context) error {
+
+	ctx2 := &ExecContext{
+		Context:      ctx,
+		RuntimeNodes: map[string]*ExecRuntimeNode{},
+		Log:          *log.New(os.Stderr, "[SYNWORK-EXEC]", log.Ltime),
 	}
 	err := r.execPlan.Exec(ctx2)
 	return err

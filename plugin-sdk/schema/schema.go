@@ -2,7 +2,7 @@ package schema
 
 type SchemaType uint
 
-type SchemaDefaultFunc func() (interface{}, error)
+type SchemaDefaultFunc interface{}
 
 const (
 	TypeUndefined SchemaType = 0

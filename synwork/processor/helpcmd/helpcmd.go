@@ -2,6 +2,7 @@ package helpcmd
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -24,7 +25,9 @@ func NewCmd() runtime.Command {
 
 func (c *cmd) Eval(cf *cfg.Config, args []string) {
 	c.parseArgs(args)
-	r, err := runtime.NewRuntime(cf)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	r, err := runtime.NewRuntime(ctx, cf)
 	if err != nil {
 		panic(err)
 	}

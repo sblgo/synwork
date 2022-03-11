@@ -30,3 +30,15 @@ func (p *Parser) Parse() error {
 	p.Blocks = p.tokenizer.Blocks
 	return nil
 }
+
+func NewParserForTest(fileName string, fileContent string) (*Parser, error) {
+	tk, err := NewTokenizerForTest(fileName, fileContent)
+	if err != nil {
+		return nil, err
+	}
+	p := &Parser{
+		dirname:   ".",
+		tokenizer: tk,
+	}
+	return p, nil
+}

@@ -28,3 +28,11 @@ type PluginMethodIn struct {
 type PluginMethodOut struct {
 	Result map[string]interface{}
 }
+
+type PluginDebugIn struct {
+	Environ []string
+}
+
+type PluginDebugOut struct {
+	Status int
+}

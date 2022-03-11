@@ -3,6 +3,8 @@ package plugin
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
 
 	"sbl.systems/go/synwork/plugin-sdk/comstrs"
 	"sbl.systems/go/synwork/plugin-sdk/schema"
@@ -37,6 +39,15 @@ func (p *Plugin) Schema(dataIn *comstrs.PluginSchemaIn, dataOut *comstrs.PluginS
 	provider := p.provider()
 	p.providerDetails = provider
 	dataOut.Provider = provider
+	return nil
+}
+
+func (p *Plugin) DebugInit(dataIn *comstrs.PluginDebugIn, dataOut *comstrs.PluginDebugOut) error {
+	for _, e := range dataIn.Environ {
+		parts := strings.SplitN(e, "=", 2)
+		os.Setenv(parts[0], parts[1])
+	}
+	dataOut.Status = len(dataIn.Environ)
 	return nil
 }
 

@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -83,7 +84,7 @@ func NewPluginLocation(sourceStr string, versionDesc string) *PluginLocation {
 	if loc.Version == "" {
 		loc.Version = "0.1"
 	}
-	processorName := fmt.Sprintf("synwork_processor_%s%s", loc.Name, PluginEnv.ProgrammExt)
+	processorName := fmt.Sprintf("synwork-processor-%s%s", loc.Name, PluginEnv.ProgrammExt)
 	loc.Directory = filepath.Join(PluginEnv.PluginDir, loc.Hostname, loc.Namespace, loc.Name, loc.Version, PluginEnv.OsArch)
 	loc.Program = filepath.Join(loc.Directory, processorName)
 	return loc
@@ -92,15 +93,17 @@ func NewPluginLocation(sourceStr string, versionDesc string) *PluginLocation {
 func (pl *PluginLocation) listVersionCandidates(vp VersionPattern) []string {
 	candidats := []string{}
 	pluginDir := filepath.Join(PluginEnv.PluginDir, pl.Hostname, pl.Namespace, pl.Name)
-	processorName := fmt.Sprintf("synwork_processor_%s%s", pl.Name, PluginEnv.ProgrammExt)
+	processorName := fmt.Sprintf("synwork-processor-%s%s", pl.Name, PluginEnv.ProgrammExt)
 	existsProcess := func(vd string) bool {
 		programm := filepath.Join(pluginDir, vd, PluginEnv.OsArch, processorName)
 		if fileInfo, err := os.Stat(programm); err == nil && !fileInfo.IsDir() {
 			return true
+		} else {
+			log.Println(err)
+			return false
 		}
-		return false
 	}
-	if versDirs, err := os.ReadDir(pluginDir); err != nil {
+	if versDirs, err := os.ReadDir(pluginDir); err == nil {
 		for _, vd := range versDirs {
 			if vd.IsDir() && vp.Match(vd.Name()) && existsProcess(vd.Name()) {
 				candidats = append(candidats, vd.Name())

@@ -202,7 +202,7 @@ func (pr *PluginSource) selectPluginProgram() error {
 	}
 
 	if len(pr.allVersions) == 0 {
-		return fmt.Errorf("missing plugin %s", pr.Source)
+		return fmt.Errorf("missing plugin %s(%s) in %s", pr.Source, pr.VersionConstraint.String(), pr.Config.PluginDir)
 	}
 	keySorter := &pluginKeySorter{pr.allVersions}
 	sort.Sort(keySorter)

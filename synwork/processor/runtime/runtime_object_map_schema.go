@@ -71,7 +71,7 @@ func mapSchemaAndNode(path string, sma map[string]*schema.Schema, n ast.BlockCon
 					value[key] = []interface{}{}
 				}
 				list := value[key].([]interface{})
-				obj, ref, err := mapSchemaAndNode(fmt.Sprintf("%s/%d/%s", path, len(list), key), s.Elem, *i.Content)
+				obj, ref, err := mapSchemaAndNode(fmt.Sprintf("%s/%s/%d", path, key, len(list)), s.Elem, *i.Content)
 				if err != nil {
 					return nil, nil, err
 				}
@@ -99,13 +99,9 @@ func mapSchemaAndNode(path string, sma map[string]*schema.Schema, n ast.BlockCon
 				if s.DefaultValue != nil {
 					value[k] = s.DefaultValue
 				} else if s.DefaultFunc != nil {
-					if v, err := s.DefaultFunc(); err != nil {
-						return nil, nil, fmt.Errorf("[%s - %s] defaultFunc for %s ends with %s", n.Begin, n.End, k, err.Error())
-					} else {
-						value[k] = v
-					}
+					value[k] = s.DefaultFunc
 				} else if s.Required {
-					return nil, nil, fmt.Errorf("")
+					return nil, nil, fmt.Errorf("missing default value for required field %s", k)
 				}
 			}
 		}

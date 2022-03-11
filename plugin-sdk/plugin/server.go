@@ -70,6 +70,7 @@ func Debug(opts PluginOptions) bool {
 		}
 		go http.Serve(l, nil)
 		<-plg.shutdown
+		os.Remove(fileName)
 	}
 
 	return true

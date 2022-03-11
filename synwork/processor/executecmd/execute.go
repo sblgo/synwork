@@ -3,6 +3,8 @@ package executecmd
 import (
 	"context"
 	"flag"
+	"log"
+	"os"
 
 	"sbl.systems/go/synwork/synwork/processor/cfg"
 	"sbl.systems/go/synwork/synwork/processor/runtime"
@@ -17,17 +19,28 @@ func NewCmd() runtime.Command {
 }
 
 func (c *cmd) Eval(cf *cfg.Config, args []string) {
+	log := log.New(os.Stderr, "[SYNWORK-EVAL]", log.Ltime|log.Lmicroseconds)
 	c.parseArgs(args)
-	r, err := runtime.NewRuntime(cf)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	r, err := runtime.NewRuntime(ctx, cf)
 	if err != nil {
-		panic(err)
+		log.Println(err)
+		return
 	}
 	defer r.Shutdown()
 	if err = r.StartUp(runtime.RuntimeOptionsExec); err != nil {
-		panic(err)
+		log.Println(err)
+		return
 	}
-	ctx := context.Background()
-	r.Exec(ctx)
+	if err = r.Dump(ctx); err != nil {
+		log.Println(err)
+		return
+	}
+	if err = r.Exec(ctx); err != nil {
+		log.Println(err)
+		return
+	}
 }
 
 func (c *cmd) parseArgs(args []string) {

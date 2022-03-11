@@ -1,8 +1,12 @@
 package runtime
 
 import (
+	"bufio"
+	"context"
 	"fmt"
+	"io"
 	"net"
+	"net/textproto"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -28,19 +32,22 @@ type PluginRuntime struct {
 	Config          *cfg.Config
 }
 
-func (pr *PluginRuntime) Start(from, to int) (*Plugin, error) {
+func (pr *PluginRuntime) Start(ctx context.Context, from, to int) (*Plugin, error) {
 	if port, ok := pr.debugMode(); ok {
-		return NewPlugin(port, pr.Name, pr.name)
+		pl, err := NewPlugin(port, pr.Name, pr.name)
+		if err == nil {
+			err = pl.DebugEnv()
+		}
+		return pl, err
 	}
 
 	port, ok := pr.findPort(from, to)
 	if !ok {
 		return nil, fmt.Errorf("can't find free port in range %d to %d", from, to)
 	}
-	if name, err := pr.startPluginServer(port); err != nil {
+	if name, err := pr.startPluginServer(ctx, port); err != nil {
 		return nil, err
 	} else {
-
 		return NewPlugin(port, pr.Name, name)
 	}
 
@@ -70,10 +77,13 @@ func (pr *PluginRuntime) findPort(from, to int) (int, bool) {
 	return 0, false
 }
 
-func (pr *PluginRuntime) startPluginServer(port int) (string, error) {
+func (pr *PluginRuntime) startPluginServer(ctx context.Context, port int) (string, error) {
 	var err error
 	for cnt := 0; cnt < 5; cnt++ {
 		cmd := exec.Command(pr.pluginProgram, strconv.Itoa(port))
+		cmd.Env = os.Environ()
+		go pr.copyCmdOut(ctx, cmd.StderrPipe, os.Stderr)
+		go pr.copyCmdOut(ctx, cmd.StdoutPipe, os.Stderr)
 		err = cmd.Start()
 		if err == nil {
 			return pr.name, nil
@@ -81,4 +91,24 @@ func (pr *PluginRuntime) startPluginServer(port int) (string, error) {
 		time.Sleep(100 * time.Millisecond)
 	}
 	return pr.name, err
+}
+
+func (pr *PluginRuntime) copyCmdOut(ctx context.Context, p func() (io.ReadCloser, error), w io.Writer) {
+	r, err := p()
+	if err != nil {
+		return
+	}
+	reader := textproto.NewReader(bufio.NewReader(r))
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+		line, err := reader.ReadContinuedLine()
+		if err == nil {
+			out := fmt.Sprintf("[%s] %s\n", pr.name, line)
+			w.Write([]byte(out))
+		}
+	}
 }

@@ -17,3 +17,4 @@ synwork/synwork
 synwork/random.csv
 synwork/parser/y.output
 .vscode
+bin/

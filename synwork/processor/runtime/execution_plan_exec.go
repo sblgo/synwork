@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"log"
 	"strings"
 	"sync"
 
@@ -11,6 +12,8 @@ import (
 type ExecContext struct {
 	Context      context.Context
 	RuntimeNodes map[string]*ExecRuntimeNode
+	Log          log.Logger
+	Error        error
 }
 
 type ExecRuntimeNode struct {
@@ -31,7 +34,9 @@ func (ep *ExecPlan) Exec(ec *ExecContext) error {
 	}
 
 	for _, ern := range startNodes {
-		ep.executeRuntimeNode(ec, ern)
+		if err := ep.executeRuntimeNode(ec, ern); err != nil {
+
+		}
 	}
 
 	return nil
@@ -54,29 +59,38 @@ func (ep *ExecPlan) createRuntimeNodes(ec *ExecContext, epn *ExecPlanNode) *Exec
 	return ern
 }
 
-func (ep *ExecPlan) executeRuntimeNode(ec *ExecContext, ern *ExecRuntimeNode) {
+func (ep *ExecPlan) executeRuntimeNode(ec *ExecContext, ern *ExecRuntimeNode) error {
 	for _, ern2 := range ern.Required {
-		ep.executeRuntimeNode(ec, ern2)
+		if err := ep.executeRuntimeNode(ec, ern2); err != nil {
+			return err
+		}
 	}
-	ern.executeNode(ec)
+	return ern.executeNode(ec)
 }
 
-func (ern *ExecRuntimeNode) executeNode(ec *ExecContext) {
+func (ern *ExecRuntimeNode) executeNode(ec *ExecContext) (err error) {
 	if ern.PlanNode.Method != nil {
-		ern.once.Do(func() { ern.executeMethod(ec) })
+		ern.once.Do(func() { err = ern.executeMethod(ec) })
 	} else if ern.PlanNode.Processor != nil {
-		ern.once.Do(func() { ern.executeProcessor(ec) })
+		ern.once.Do(func() { err = ern.executeProcessor(ec) })
 	}
+	return
 }
 
 func (ern *ExecRuntimeNode) executeMethod(ec *ExecContext) error {
 	runtimeObj := ern.PlanNode.Method.Data
 	objData, err := ern.createObjectData(ec, runtimeObj)
 	if err != nil {
+		ec.Log.Printf("%s [%s->%s] prepare error %s", ern.PlanNode.Id, ern.PlanNode.Processor.plugin.name, ern.PlanNode.Method.Name, err.Error())
 		return err
 	}
 	result, err := ern.PlanNode.Method.Plugin.Call(ern.PlanNode.Method.Instance, ern.PlanNode.Method.Name, objData)
 	ern.Result = result
+	if err != nil {
+		ec.Log.Printf("%s [%s->%s] call error %s", ern.PlanNode.Id, ern.PlanNode.Method.Plugin.name, ern.PlanNode.Method.Name, err.Error())
+	} else {
+		ec.Log.Printf("%s [%s->%s] call done", ern.PlanNode.Id, ern.PlanNode.Method.Plugin.name, ern.PlanNode.Method.Name)
+	}
 	return err
 
 }
@@ -85,9 +99,15 @@ func (ern *ExecRuntimeNode) executeProcessor(ec *ExecContext) error {
 	runtimeObj := ern.PlanNode.Processor.data
 	objData, err := ern.createObjectData(ec, runtimeObj)
 	if err != nil {
+		ec.Log.Printf("%s [%s->init] prepare error %s", ern.PlanNode.Id, ern.PlanNode.Processor.PluginName, err.Error())
 		return err
 	}
 	err = ern.PlanNode.Processor.plugin.Init(ern.PlanNode.Processor.Id, objData)
+	if err != nil {
+		ec.Log.Printf("%s [%s->init] error %s", ern.PlanNode.Id, ern.PlanNode.Processor.PluginName, err.Error())
+	} else {
+		ec.Log.Printf("%s [%s->init] done", ern.PlanNode.Id, ern.PlanNode.Processor.PluginName)
+	}
 	return err
 }
 

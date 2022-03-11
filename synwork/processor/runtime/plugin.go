@@ -3,6 +3,7 @@ package runtime
 import (
 	"fmt"
 	"net/rpc"
+	"os"
 	"time"
 
 	"sbl.systems/go/synwork/plugin-sdk/comstrs"
@@ -89,4 +90,13 @@ func (p *Plugin) Call(instName string, methName string, data map[string]interfac
 	err := p.client.Call("Plugin.Call", dataIn, dataOut)
 
 	return dataOut.Result, err
+}
+
+func (p *Plugin) DebugEnv() error {
+	dataIn := &comstrs.PluginDebugIn{
+		Environ: os.Environ(),
+	}
+	dataOut := &comstrs.PluginDebugOut{}
+	err := p.client.Call("Plugin.DebugInit", dataIn, dataOut)
+	return err
 }

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"go/scanner"
 	"go/token"
-	"io/fs"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
@@ -17,13 +16,14 @@ type (
 		actualToken *Token
 		parseErrors []ErrorEntry
 
-		scanner   scanner.Scanner
-		Blocks    []*ast.BlockNode
-		files     []fs.FileInfo
-		file      *token.File
-		fileSet   *token.FileSet
-		fileIndex int
-		dirname   string
+		scanner         scanner.Scanner
+		Blocks          []*ast.BlockNode
+		files           []string
+		file            *token.File
+		fileSet         *token.FileSet
+		contentProvider func(string) ([]byte, error)
+		fileIndex       int
+		dirname         string
 	}
 
 	Token struct {
@@ -49,13 +49,26 @@ func (p ParseError) Error() string {
 	return result
 }
 
+func NewTokenizerForTest(fileName string, fileContent string) (*Tokenizer, error) {
+	p := &Tokenizer{
+		dirname:         ".",
+		fileSet:         token.NewFileSet(),
+		files:           []string{fileName},
+		parseErrors:     []ErrorEntry{},
+		Blocks:          []*ast.BlockNode{},
+		contentProvider: func(s string) ([]byte, error) { return []byte(fileContent), nil },
+	}
+	return p, nil
+}
+
 func NewTokenizer(dirname string) (*Tokenizer, error) {
 	p := &Tokenizer{
-		dirname:     dirname,
-		fileSet:     token.NewFileSet(),
-		files:       []fs.FileInfo{},
-		parseErrors: []ErrorEntry{},
-		Blocks:      []*ast.BlockNode{},
+		dirname:         dirname,
+		fileSet:         token.NewFileSet(),
+		files:           []string{},
+		parseErrors:     []ErrorEntry{},
+		Blocks:          []*ast.BlockNode{},
+		contentProvider: ioutil.ReadFile,
 	}
 
 	var err error
@@ -65,7 +78,7 @@ func NewTokenizer(dirname string) (*Tokenizer, error) {
 	}
 	for _, r := range files {
 		if strings.HasSuffix(r.Name(), ".snw") {
-			p.files = append(p.files, r)
+			p.files = append(p.files, r.Name())
 		}
 	}
 	if len(p.files) == 0 {
@@ -96,9 +109,9 @@ func (t *Tokenizer) next() *Token {
 
 	if t.file == nil || t.actualToken.baseValue == token.EOF {
 		if t.fileIndex < len(t.files) {
-			name := filepath.Join(t.dirname, t.files[t.fileIndex].Name())
+			name := filepath.Join(t.dirname, t.files[t.fileIndex])
 			t.fileIndex++
-			src, err := ioutil.ReadFile(name)
+			src, err := t.contentProvider(name)
 			if err != nil {
 				t.Error(fmt.Sprintf("error opening %s. details %s", name, err.Error()))
 				return t.next()

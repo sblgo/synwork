@@ -73,11 +73,7 @@ func MapSchemaAndNode2(sma map[string]*schema.Schema, n BlockContentNode) (map[s
 				if s.DefaultValue != nil {
 					value[k] = s.DefaultValue.(string)
 				} else if s.DefaultFunc != nil {
-					if v, err := s.DefaultFunc(); err != nil {
-						return nil, nil, fmt.Errorf("[%s - %s] defaultFunc for %s ends with ", n.Begin, n.End, k, err.Error())
-					} else {
-						value[k] = v.(string)
-					}
+					value[k] = s.DefaultFunc.(string)
 				}
 			}
 		}

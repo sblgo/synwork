@@ -143,11 +143,7 @@ func defaultValue(sma *Schema, val interface{}) (interface{}, bool, error) {
 	if val == nil && sma.Optional && sma.DefaultValue != nil {
 		return sma.DefaultValue, true, nil
 	} else if val == nil && sma.Optional && sma.DefaultFunc != nil {
-		if vi, err := sma.DefaultFunc(); err != nil {
-			return nil, false, err
-		} else if vi != nil {
-			return vi, true, nil
-		}
+		return sma.DefaultFunc, true, nil
 	} else if val == nil && sma.Required {
 		return nil, false, nil
 	} else if val != nil {
