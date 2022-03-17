@@ -16,6 +16,7 @@ func print(s string) {
     node    ast.Node
     array   []interface{}
     strar   []string
+    strval  string
 }
 
 
@@ -44,6 +45,7 @@ func print(s string) {
 %type <strar> reference_parts
 %type <node> boolean_value
 %type <strar> string_list
+%type <strval> ident
 
 %%
 
@@ -81,14 +83,14 @@ block_body:
     { $$ = &ast.BlockContentNode{ Assignments: []*ast.AssignmentNode{},Blocks: []*ast.BlockNode{} } }
 
 block_entry:
-    IDENT unnamed_block
+    ident unnamed_block
     { 
         bcn := $2.(*ast.ComplexValue)    
-        $$ = &ast.BlockNode{Begin: $1.Position, Type: $1.RawString, Content: &bcn.BlockContentNode } 
+        $$ = &ast.BlockNode{Begin: "", Type: $1, Content: &bcn.BlockContentNode } 
     }
     |
-    IDENT ASSIGN value
-    { $$ = &ast.AssignmentNode{ Begin: $1.Position, Identifier: $1.RawString, Value: $3.(ast.ValueNode) } }
+    ident ASSIGN value
+    { $$ = &ast.AssignmentNode{ Begin: $2.Position, Identifier: $1, Value: $3.(ast.ValueNode) } }
 
 value:
     unnamed_block
@@ -130,12 +132,16 @@ reference:
     { $$ = &ast.ReferenceValue{Begin:$1.Position,RefParts:$2}}
 
 reference_parts:
-    reference_parts DOT IDENT
-    { $$ = append($1,$3.RawString) }
+    reference_parts DOT ident
+    { $$ = append($1,$3) }
     |
-    IDENT
-    { $$ = []string{$1.RawString}}
+    ident
+    { $$ = []string{$1}}
 
+ident:
+    ident MINUS IDENT { $$ = $1 + "-" + $3.RawString }
+    |
+    IDENT { $$ = $1.RawString }
 
 boolean_value:
     TRUE

@@ -18,11 +18,12 @@ func print(s string) {
 
 //line block.y:14
 type yySymType struct {
-	yys   int
-	raw   *Token
-	node  ast.Node
-	array []interface{}
-	strar []string
+	yys    int
+	raw    *Token
+	node   ast.Node
+	array  []interface{}
+	strar  []string
+	strval string
 }
 
 const IDENT = 57346
@@ -72,52 +73,53 @@ var yyExca = [...]int{
 
 const yyPrivate = 57344
 
-const yyLast = 36
+const yyLast = 41
 
 var yyAct = [...]int{
 
-	7, 5, 16, 33, 20, 23, 22, 21, 26, 7,
-	24, 25, 13, 12, 34, 15, 29, 30, 27, 28,
-	7, 11, 6, 9, 32, 3, 4, 18, 31, 19,
-	17, 14, 10, 8, 2, 1,
+	11, 7, 5, 18, 36, 22, 25, 24, 23, 28,
+	7, 26, 27, 14, 13, 15, 15, 17, 32, 33,
+	30, 31, 7, 12, 6, 9, 12, 29, 3, 35,
+	4, 20, 34, 21, 19, 16, 10, 37, 8, 2,
+	1,
 }
 var yyPact = [...]int{
 
-	-1000, 21, -1000, -1000, 15, -1000, -1000, -1000, 17, -1000,
-	-1000, 4, -1000, -5, -1000, -1000, -1000, -1000, -1000, -1000,
-	-1000, 9, 7, -1000, -1000, -1000, 20, -1000, -1000, -1000,
-	-1000, -11, -1000, 10, -1000,
+	-1000, 24, -1000, -1000, 17, -1000, -1000, -1000, 19, -1000,
+	-1000, 5, -1000, -1000, -4, 23, -1000, -1000, -1000, -1000,
+	-1000, -1000, -1000, 11, 9, -1000, -1000, -1000, 22, -1000,
+	-1000, -1000, -1000, -1000, -10, 4, 22, 4,
 }
 var yyPgo = [...]int{
 
-	0, 35, 34, 33, 32, 1, 31, 30, 29, 28,
-	27, 26,
+	0, 40, 39, 38, 36, 2, 35, 34, 33, 32,
+	31, 30, 0,
 }
 var yyR1 = [...]int{
 
 	0, 1, 1, 2, 5, 3, 3, 4, 4, 6,
 	6, 6, 6, 6, 7, 7, 7, 7, 7, 7,
-	8, 9, 9, 10, 10, 11, 11,
+	8, 9, 9, 12, 12, 10, 10, 11, 11,
 }
 var yyR2 = [...]int{
 
 	0, 0, 2, 3, 3, 2, 0, 2, 3, 1,
 	1, 1, 1, 1, 1, 2, 2, 1, 2, 2,
-	2, 3, 1, 1, 1, 2, 0,
+	2, 3, 1, 3, 1, 1, 1, 2, 0,
 }
 var yyChk = [...]int{
 
 	-1000, -1, -2, 4, -11, -5, 7, 5, -3, 6,
-	-4, 4, -5, 8, -6, -5, 7, -7, -10, -8,
-	9, 12, 11, 10, 15, 16, 13, 9, 10, 9,
-	10, -9, 4, 14, 4,
+	-4, -12, 4, -5, 8, 11, -6, -5, 7, -7,
+	-10, -8, 9, 12, 11, 10, 15, 16, 13, 4,
+	9, 10, 9, 10, -9, -12, 14, -12,
 }
 var yyDef = [...]int{
 
-	1, -2, 2, 26, 0, 3, 25, 6, 0, 4,
-	5, 0, 7, 0, 8, 9, 10, 11, 12, 13,
-	14, 0, 0, 17, 23, 24, 0, 15, 18, 16,
-	19, 20, 22, 0, 21,
+	1, -2, 2, 28, 0, 3, 27, 6, 0, 4,
+	5, 0, 24, 7, 0, 0, 8, 9, 10, 11,
+	12, 13, 14, 0, 0, 17, 25, 26, 0, 23,
+	15, 18, 16, 19, 20, 22, 0, 21,
 }
 var yyTok1 = [...]int{
 
@@ -471,31 +473,31 @@ yydefault:
 
 	case 1:
 		yyDollar = yyS[yypt-0 : yypt+1]
-//line block.y:51
+//line block.y:53
 		{
 		}
 	case 2:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line block.y:54
+//line block.y:56
 		{
 			yylex.(*Tokenizer).consumeBlock(yyDollar[2].node.(*ast.BlockNode))
 		}
 	case 3:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line block.y:59
+//line block.y:61
 		{
 			bcn := yyDollar[3].node.(*ast.ComplexValue)
 			yyVAL.node = &ast.BlockNode{Begin: yyDollar[1].raw.Position, Type: yyDollar[1].raw.RawString, Identifiers: yyDollar[2].strar, Content: &bcn.BlockContentNode}
 		}
 	case 4:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line block.y:66
+//line block.y:68
 		{
 			yyVAL.node = &ast.ComplexValue{*(yyDollar[2].node.(*ast.BlockContentNode))}
 		}
 	case 5:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line block.y:70
+//line block.y:72
 		{
 			bcn := yyDollar[1].node.(*ast.BlockContentNode)
 			switch n := yyDollar[2].node.(type) {
@@ -508,128 +510,140 @@ yydefault:
 		}
 	case 6:
 		yyDollar = yyS[yypt-0 : yypt+1]
-//line block.y:81
+//line block.y:83
 		{
 			yyVAL.node = &ast.BlockContentNode{Assignments: []*ast.AssignmentNode{}, Blocks: []*ast.BlockNode{}}
 		}
 	case 7:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line block.y:85
+//line block.y:87
 		{
 			bcn := yyDollar[2].node.(*ast.ComplexValue)
-			yyVAL.node = &ast.BlockNode{Begin: yyDollar[1].raw.Position, Type: yyDollar[1].raw.RawString, Content: &bcn.BlockContentNode}
+			yyVAL.node = &ast.BlockNode{Begin: "", Type: yyDollar[1].strval, Content: &bcn.BlockContentNode}
 		}
 	case 8:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line block.y:91
+//line block.y:93
 		{
-			yyVAL.node = &ast.AssignmentNode{Begin: yyDollar[1].raw.Position, Identifier: yyDollar[1].raw.RawString, Value: yyDollar[3].node.(ast.ValueNode)}
+			yyVAL.node = &ast.AssignmentNode{Begin: yyDollar[2].raw.Position, Identifier: yyDollar[1].strval, Value: yyDollar[3].node.(ast.ValueNode)}
 		}
 	case 9:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line block.y:95
+//line block.y:97
 		{
 			yyVAL.node = yyDollar[1].node
 		}
 	case 10:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line block.y:98
+//line block.y:100
 		{
 			yyVAL.node = &ast.StringValue{Begin: yyDollar[1].raw.Position, Value: yyDollar[1].raw.RawString}
 		}
 	case 11:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line block.y:101
+//line block.y:103
 		{
 			yyVAL.node = yyDollar[1].node
 		}
 	case 12:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line block.y:104
+//line block.y:106
 		{
 			yyVAL.node = yyDollar[1].node
 		}
 	case 13:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line block.y:107
+//line block.y:109
 		{
 			yyVAL.node = yyDollar[1].node
 		}
 	case 14:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line block.y:111
+//line block.y:113
 		{
 			yyVAL.node = &ast.IntValue{Begin: yyDollar[1].raw.Position, Value: convertIntValue(1, yyDollar[1].raw.RawString)}
 		}
 	case 15:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line block.y:114
+//line block.y:116
 		{
 			yyVAL.node = &ast.IntValue{Begin: yyDollar[1].raw.Position, Value: convertIntValue(1, yyDollar[2].raw.RawString)}
 		}
 	case 16:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line block.y:117
+//line block.y:119
 		{
 			yyVAL.node = &ast.IntValue{Begin: yyDollar[1].raw.Position, Value: convertIntValue(-1, yyDollar[2].raw.RawString)}
 		}
 	case 17:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line block.y:120
+//line block.y:122
 		{
 			yyVAL.node = &ast.FloatValue{Begin: yyDollar[1].raw.Position, Value: convertFloatValue(1, yyDollar[1].raw.RawString)}
 		}
 	case 18:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line block.y:123
+//line block.y:125
 		{
 			yyVAL.node = &ast.FloatValue{Begin: yyDollar[1].raw.Position, Value: convertFloatValue(1, yyDollar[2].raw.RawString)}
 		}
 	case 19:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line block.y:126
+//line block.y:128
 		{
 			yyVAL.node = &ast.FloatValue{Begin: yyDollar[1].raw.Position, Value: convertFloatValue(-1, yyDollar[2].raw.RawString)}
 		}
 	case 20:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line block.y:130
+//line block.y:132
 		{
 			yyVAL.node = &ast.ReferenceValue{Begin: yyDollar[1].raw.Position, RefParts: yyDollar[2].strar}
 		}
 	case 21:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line block.y:134
+//line block.y:136
 		{
-			yyVAL.strar = append(yyDollar[1].strar, yyDollar[3].raw.RawString)
+			yyVAL.strar = append(yyDollar[1].strar, yyDollar[3].strval)
 		}
 	case 22:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line block.y:137
+//line block.y:139
 		{
-			yyVAL.strar = []string{yyDollar[1].raw.RawString}
+			yyVAL.strar = []string{yyDollar[1].strval}
 		}
 	case 23:
-		yyDollar = yyS[yypt-1 : yypt+1]
+		yyDollar = yyS[yypt-3 : yypt+1]
 //line block.y:142
 		{
-			yyVAL.node = &ast.BoolValue{Begin: yyDollar[1].raw.Position, Value: true}
+			yyVAL.strval = yyDollar[1].strval + "-" + yyDollar[3].raw.RawString
 		}
 	case 24:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line block.y:145
+//line block.y:144
+		{
+			yyVAL.strval = yyDollar[1].raw.RawString
+		}
+	case 25:
+		yyDollar = yyS[yypt-1 : yypt+1]
+//line block.y:148
+		{
+			yyVAL.node = &ast.BoolValue{Begin: yyDollar[1].raw.Position, Value: true}
+		}
+	case 26:
+		yyDollar = yyS[yypt-1 : yypt+1]
+//line block.y:151
 		{
 			yyVAL.node = &ast.BoolValue{Begin: yyDollar[1].raw.Position, Value: false}
 		}
-	case 25:
+	case 27:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line block.y:150
+//line block.y:156
 		{
 			yyVAL.strar = append(yyDollar[1].strar, yyDollar[2].raw.RawString)
 		}
-	case 26:
+	case 28:
 		yyDollar = yyS[yypt-0 : yypt+1]
-//line block.y:152
+//line block.y:158
 		{
 			yyVAL.strar = []string{}
 		}
