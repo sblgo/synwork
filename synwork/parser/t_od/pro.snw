@@ -9,3 +9,6 @@ processors {
     }
 }
 
+method "test" "inst" "test01" {
+    wrap-text = true
+}

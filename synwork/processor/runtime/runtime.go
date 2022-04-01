@@ -55,7 +55,7 @@ var (
 	}
 	RuntimeOptionsHelp = []RuntimeOption{
 		parse,
-		initPluginSource(updateLocalPlugins),
+		initPluginSource(useLocalPlugins),
 		initVariable,
 		initPlugins,
 	}

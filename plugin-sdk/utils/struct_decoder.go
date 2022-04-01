@@ -60,7 +60,7 @@ func (d *Decoder) convertReflectStruct(modelReflect reflect.Value, sourceMap map
 	}
 	for key, value := range sourceMap {
 		if fieldIdx, ok := d.fieldNameToPos[key]; !ok {
-			return fmt.Errorf("")
+			return fmt.Errorf("missing field %s in structure %s", key, modelReflect.Type().Name())
 		} else {
 			d.setReflectValue(modelReflect.Field(fieldIdx), value)
 		}
@@ -99,7 +99,7 @@ func (d *Decoder) setReflectValue(modelReflect reflect.Value, value interface{})
 					return err
 				}
 				reflectArr = reflect.Append(reflectArr, itemReflect)
-				fmt.Printf("item %#v array %#v\n", itemReflect.Interface(), reflectArr.Interface())
+				//				fmt.Printf("item %#v array %#v\n", itemReflect.Interface(), reflectArr.Interface())
 			}
 			modelReflect.Set(reflectArr)
 		}

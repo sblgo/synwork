@@ -120,8 +120,12 @@ func (ern *ExecRuntimeNode) createObjectData(ec *ExecContext, runObj *RuntimeObj
 			id := ref.Type.Id(ref.Key)
 			if rn, ok := ec.RuntimeNodes[id]; ok {
 				if val, ok := schema.GetValueMap(rn.Result, ref.Path); ok {
-					tgtPath := strings.Split(strings.Trim(ref.Location, "/"), "/")
-					schema.SetValueMap(newValue, tgtPath, val)
+					if newVal, err := MapSchemaAndInterface(&ref.Schema, val); err != nil {
+						return nil, err
+					} else {
+						tgtPath := strings.Split(strings.Trim(ref.Location, "/"), "/")
+						schema.SetValueMap(newValue, tgtPath, newVal)
+					}
 				}
 			}
 		case ReferenceTypeVariable:

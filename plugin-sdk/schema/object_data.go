@@ -43,7 +43,12 @@ func setMap(sma map[string]*Schema, value map[string]interface{}, path []string,
 				if vc, ok := value[path[0]]; ok {
 					if vm, ok := vc.(map[string]interface{}); ok {
 						setMap(smc.Elem, vm, path[1:], val)
+						value[path[0]] = vm
 					}
+				} else {
+					value[path[0]] = map[string]interface{}{}
+					vm := value[path[0]].(map[string]interface{})
+					setMap(smc.Elem, vm, path[1:], val)
 				}
 			case TypeList:
 				if vc, ok := value[path[0]]; ok {
@@ -101,7 +106,7 @@ func getValue(sma *Schema, value interface{}, path []string) interface{} {
 			if vl, ok := value.([]interface{}); ok {
 				return vl
 			}
-		case TypeString, TypeFloat, TypeInt:
+		case TypeString, TypeFloat, TypeInt, TypeBool:
 			if vi, ok, _ := defaultValue(sma, value); ok {
 				if vs, ok := valueTypeCheck(sma, vi); ok {
 					return vs
@@ -168,6 +173,9 @@ func valueTypeCheck(sma *Schema, val interface{}) (interface{}, bool) {
 		return vi, ok
 	case TypeString:
 		vs, ok := val.(string)
+		return vs, ok
+	case TypeBool:
+		vs, ok := val.(bool)
 		return vs, ok
 	case TypeGeneric:
 		return val, true

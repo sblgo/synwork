@@ -136,6 +136,9 @@ func (t *Tokenizer) next() *Token {
 		RawString: val,
 	}
 	switch t.actualToken.baseValue {
+	case token.TYPE:
+		t.actualToken.Value = IDENT
+		t.actualToken.RawString = "type"
 	case token.IDENT:
 		t.actualToken.Value = IDENT
 	case token.LBRACE:

@@ -95,7 +95,7 @@ func mapSchemaAndNode(path string, sma map[string]*schema.Schema, n ast.BlockCon
 	for k, s := range sma {
 		if _, ok := value[k]; !ok {
 			switch s.Type {
-			case schema.TypeString, schema.TypeInt:
+			case schema.TypeString, schema.TypeInt, schema.TypeBool, schema.TypeFloat:
 				if s.DefaultValue != nil {
 					value[k] = s.DefaultValue
 				} else if s.DefaultFunc != nil {
@@ -118,4 +118,170 @@ func MapSchemaAndNode(sma map[string]*schema.Schema, n ast.BlockContentNode) (*R
 	}
 	runObj := NewRuntimeObject(sma, inMap, references)
 	return runObj, nil
+}
+
+type mapSchemaIn struct {
+	parent      *mapSchemaIn
+	inValue     interface{}
+	inMapValue  map[string]interface{}
+	inArrValue  []interface{}
+	outValue    interface{}
+	outMapValue map[string]interface{}
+	outArrValue []interface{}
+	sma         *schema.Schema
+}
+
+func (m *mapSchemaIn) mapValues() error {
+	switch m.sma.Type {
+	case schema.TypeGeneric:
+		m.outValue = m.inValue
+	case schema.TypeList:
+		return m.mapListValue()
+	case schema.TypeMap:
+		return m.mapMapValue()
+	default:
+		return m.mapSkalarValue()
+	}
+	return nil
+}
+
+func (m *mapSchemaIn) mapMapValue() error {
+	if l, ok := m.inValue.(map[string]interface{}); ok {
+		m.inMapValue = l
+	} else {
+		return fmt.Errorf("expected map but get it isn't a map")
+	}
+	newValue := map[string]interface{}{}
+	for subName, subField := range m.sma.Elem {
+		cm := mapSchemaIn{
+			parent:  m,
+			sma:     subField,
+			inValue: m.inMapValue[subName],
+		}
+		if err := cm.mapValues(); err != nil {
+			return err
+		}
+		newValue[subName] = cm.outValue
+	}
+	m.outMapValue = newValue
+	m.outValue = m.outMapValue
+	return nil
+}
+
+func (m *mapSchemaIn) mapListValue() error {
+	if l, ok := m.inValue.([]interface{}); ok {
+		m.inArrValue = l
+	} else {
+		return fmt.Errorf("expected list but get it isn't a list")
+	}
+	m.outArrValue = make([]interface{}, 0)
+	m.outValue = m.outArrValue
+	for _, v := range m.inArrValue {
+		if m.sma.ElemType == schema.TypeMap || m.sma.ElemType == schema.TypeUndefined {
+			inMapValue := v.(map[string]interface{})
+			newValue := map[string]interface{}{}
+			for subName, subField := range m.sma.Elem {
+				cm := mapSchemaIn{
+					parent:  m,
+					sma:     subField,
+					inValue: inMapValue[subName],
+				}
+				if err := cm.mapValues(); err != nil {
+					return err
+				}
+				newValue[subName] = cm.outValue
+			}
+			m.outArrValue = append(m.outArrValue, newValue)
+		} else {
+			cm := mapSchemaIn{
+				parent: m,
+				sma: &schema.Schema{
+					Type: m.sma.ElemType,
+				},
+				inValue: v,
+			}
+			if err := cm.mapValues(); err != nil {
+				return err
+			}
+			m.outArrValue = append(m.outArrValue, cm.outValue)
+		}
+	}
+	m.outValue = m.outArrValue
+	return nil
+}
+
+func (m *mapSchemaIn) mapSkalarValue() error {
+	if m.inValue == nil {
+		if m.sma.Required {
+			return fmt.Errorf("missing required value")
+		} else if m.sma.Optional {
+			if m.sma.DefaultFunc != nil {
+				m.outValue = m.sma.DefaultFunc
+			} else {
+				m.outValue = m.sma.DefaultValue
+			}
+			// if m.outValue == nil {
+			// 	return fmt.Errorf("missing required default value")
+			// }
+		}
+		return nil
+	}
+	switch t := m.inValue.(type) {
+	case string:
+		if m.sma.Type == schema.TypeString {
+			m.outValue = t
+		} else {
+			return fmt.Errorf("invalid type expected %s but get string", m.sma.Type)
+		}
+	case int:
+		if m.sma.Type == schema.TypeInt {
+			m.outValue = int(t)
+		} else {
+			return fmt.Errorf("invalid type expected %s but get int", m.sma.Type)
+		}
+	case int64:
+		if m.sma.Type == schema.TypeInt {
+			m.outValue = int(t)
+		} else {
+			return fmt.Errorf("invalid type expected %s but get int", m.sma.Type)
+		}
+	case int32:
+		if m.sma.Type == schema.TypeInt {
+			m.outValue = int(t)
+		} else {
+			return fmt.Errorf("invalid type expected %s but get int", m.sma.Type)
+		}
+	case bool:
+		if m.sma.Type == schema.TypeBool {
+			m.outValue = bool(t)
+		} else {
+			return fmt.Errorf("invalid type expected %s but get bool", m.sma.Type)
+		}
+	case float32:
+		if m.sma.Type == schema.TypeFloat {
+			m.outValue = float64(t)
+		} else {
+			return fmt.Errorf("invalid type expected %s but get float32", m.sma.Type)
+		}
+	case float64:
+		if m.sma.Type == schema.TypeFloat {
+			m.outValue = float64(t)
+		} else {
+			return fmt.Errorf("invalid type expected %s but get float64", m.sma.Type)
+		}
+	default:
+		return fmt.Errorf("invalid type")
+	}
+	return nil
+}
+
+func MapSchemaAndInterface(sma *schema.Schema, v interface{}) (interface{}, error) {
+	mapper := &mapSchemaIn{
+		inValue: v,
+		sma:     sma,
+	}
+	if err := mapper.mapValues(); err != nil {
+		return nil, err
+	}
+	return mapper.outValue, nil
 }

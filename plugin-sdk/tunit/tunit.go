@@ -68,8 +68,12 @@ func createObjectData(mm MethodMock, runObj *runtime.RuntimeObject) (map[string]
 		case runtime.ReferenceTypeProcessor, runtime.ReferenceTypeMethod:
 			path := append([]string{"method", ref.Key}, ref.Path...)
 			if val, ok := schema.GetValueMap(mm.References, path); ok {
-				tgtPath := strings.Split(strings.Trim(ref.Location, "/"), "/")
-				schema.SetValueMap(newValue, tgtPath, val)
+				if newVal, err := runtime.MapSchemaAndInterface(&ref.Schema, val); err != nil {
+					return nil, err
+				} else {
+					tgtPath := strings.Split(strings.Trim(ref.Location, "/"), "/")
+					schema.SetValueMap(newValue, tgtPath, newVal)
+				}
 			}
 		case runtime.ReferenceTypeVariable:
 		case runtime.ReferenceTypeEnvironment:
