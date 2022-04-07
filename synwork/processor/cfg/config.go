@@ -3,7 +3,6 @@ package cfg
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -64,7 +63,6 @@ func (cfg *Config) evalOsArch() error {
 }
 
 func (cfg *Config) evalCacheDir() error {
-	log.Println(os.Getenv("HOME"))
 	home := filepath.SplitList(os.Getenv("HOME"))
 	if len(home) == 0 {
 		home = []string{"~"}

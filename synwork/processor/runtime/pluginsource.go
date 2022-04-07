@@ -1,7 +1,6 @@
 package runtime
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io/fs"
@@ -11,12 +10,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	version "github.com/hashicorp/go-version"
+	"sbl.systems/go/synwork/synwork/exts"
 	"sbl.systems/go/synwork/synwork/processor/cfg"
 )
 
@@ -240,64 +235,37 @@ func (pr *PluginSource) evalLocalPluginProgram() error {
 }
 
 func (ps *PluginSource) evalRemotePluginProgram() error {
-	bucket := aws.String("synwork-plugins")
-	//creds := credentials.NewStaticCredentials("AKIAQ2XVJXL4VSXOTI6U", "TAe/Jnx/OOVG8ZnvXKc2obO7iVXVk3oy9lLDQNx3", "")
-	creds := credentials.AnonymousCredentials
-	cfg := &aws.Config{
-		Region:      aws.String("eu-central-1"),
-		Credentials: creds,
-	}
-	sess, _ := session.NewSession(cfg)
 
-	downloader := s3manager.NewDownloader(sess)
-
-	buf := aws.NewWriteAtBuffer([]byte{})
-	// Write the contents of S3 Object to the file
-	_, err := downloader.Download(buf, &s3.GetObjectInput{
-		Bucket: bucket,
-		Key:    aws.String(filepath.Join(ps.Hostname, ps.Namespace, ps.Name, "versions.xml")),
-	})
-	if err != nil {
-		return fmt.Errorf("failed to download file, %v", err)
-	}
-	versions, err := ParseVersionFile(bytes.NewReader(buf.Bytes()))
-	if err != nil {
-		return fmt.Errorf("failed to download file, %v", err)
-	}
-
-	for _, v := range versions.Version {
-		if parsedVersions, err := version.NewVersion(v.Id); err == nil {
-			pr := &PluginReference{
+	for _, provider := range exts.ProcessorProviders() {
+		key := &exts.ProcessorKey{
+			Hostname:  ps.Hostname,
+			Namespace: ps.Namespace,
+			Name:      ps.Name,
+			OsArch:    ps.OsArch,
+			Ext:       ps.Ext,
+		}
+		sources, err := provider(context.Background(), key)
+		if err != nil {
+			continue
+		}
+		for _, source := range sources {
+			ps.allVersions = append(ps.allVersions, &PluginReference{
+				loadFunction: source.ProcessorProgram,
 				PluginKey: PluginKey{
 					Hostname:      ps.Hostname,
 					Namespace:     ps.Namespace,
 					Name:          ps.Name,
-					Ext:           ps.Ext,
-					Version:       v.Id,
+					Version:       source.Version.Original(),
 					OsArch:        ps.OsArch,
-					ParsedVersion: parsedVersions,
+					Ext:           ps.Ext,
+					ParsedVersion: source.Version,
 				},
-			}
-			if ps.VersionConstraint.Check(pr.ParsedVersion) {
-				file := fmt.Sprintf("synwork-processor-%s_%s_%s", pr.Name, pr.Version, pr.OsArch)
-				pr.loadFunction = func(ctx context.Context) ([]byte, error) {
-					buf := aws.NewWriteAtBuffer([]byte{})
-					// Write the contents of S3 Object to the file
-					_, err := downloader.Download(buf, &s3.GetObjectInput{
-						Bucket: bucket,
-						Key:    aws.String(filepath.Join(ps.Hostname, ps.Namespace, ps.Name, pr.Version, file)),
-					})
-					if err != nil {
-						return nil, fmt.Errorf("failed to download file %s, %v", file, err)
-					}
-
-					return buf.Bytes(), nil
-				}
-				ps.allVersions = append(ps.allVersions, pr)
-			}
+			})
 		}
 
 	}
-
+	// if len(ps.allVersions) == 0 {
+	// 	return fmt.Errorf("no source for %s/%s/%s", ps.Hostname, ps.Namespace, ps.Name)
+	// }
 	return nil
 }

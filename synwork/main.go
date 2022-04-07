@@ -8,6 +8,7 @@ import (
 	"sbl.systems/go/synwork/synwork/processor/executecmd"
 	"sbl.systems/go/synwork/synwork/processor/helpcmd"
 	"sbl.systems/go/synwork/synwork/processor/initcmd"
+	_ "sbl.systems/go/synwork/synwork/providers/awsprovider"
 )
 
 var cmds = []string{
