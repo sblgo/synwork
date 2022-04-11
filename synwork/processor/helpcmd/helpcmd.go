@@ -12,24 +12,25 @@ import (
 	"sbl.systems/go/synwork/synwork/processor/runtime"
 )
 
-type cmd struct {
-	Plugin string
-	Method string
-	Config bool
-	Result bool
-}
+type (
+	cmd struct {
+		Plugin string
+		Method string
+		Config bool
+		Result bool
+		config *cfg.Config
+	}
+	cmdProvider struct {
+	}
+)
 
-func NewCmd() runtime.Command {
-	return &cmd{}
-}
+func (c *cmd) Exec() error {
 
-func (c *cmd) Eval(cf *cfg.Config, args []string) {
-	c.parseArgs(args)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	r, err := runtime.NewRuntime(ctx, cf)
+	r, err := runtime.NewRuntime(ctx, c.config)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer r.Shutdown()
 	var pluginsMap map[string]*runtime.Plugin
@@ -37,7 +38,7 @@ func (c *cmd) Eval(cf *cfg.Config, args []string) {
 		pluginsMap = m
 	}
 	if err = r.StartUp(append(runtime.RuntimeOptionsHelp, runtime.GetPlugins(set))); err != nil {
-		panic(err)
+		return err
 	}
 	if c.Plugin == "" {
 		for k, pl := range pluginsMap {
@@ -84,22 +85,24 @@ func (c *cmd) Eval(cf *cfg.Config, args []string) {
 			fmt.Println(c.Plugin, "not found")
 		}
 	}
+	return nil
 }
 
-func (c *cmd) parseArgs(args []string) {
+func (c *cmd) parseArgs(args []string) error {
 	fs := flag.NewFlagSet("initialize", flag.PanicOnError)
 	fs.StringVar(&c.Method, "m", "", "method of the plugin")
 	fs.StringVar(&c.Plugin, "p", "", "processor")
 	fs.BoolVar(&c.Config, "c", false, "display the details of configuration")
 	fs.BoolVar(&c.Result, "r", false, "display the result of a method")
-	fs.Parse(args)
+	return fs.Parse(args)
 }
 
 func formatSchema(s map[string]*schema.Schema) string {
 	b := new(bytes.Buffer)
 	encoder := json.NewEncoder(b)
 	encoder.SetIndent("...", "   ")
-	err := encoder.Encode(schemaMapToMap(s))
+	//	err := encoder.Encode(schemaMapToMap(s))
+	err := encoder.Encode(s)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -124,4 +127,32 @@ func schemaToMap(s *schema.Schema) map[string]interface{} {
 	}
 	r["06-Elem"] = schemaMapToMap(s.Elem)
 	return r
+}
+
+func init() {
+	cfg.RegisterCmd("details", &cmdProvider{})
+}
+
+func (c *cmd) Init(config *cfg.Config) error {
+	c.config = config
+	return nil
+}
+
+func (*cmdProvider) Parse(args []string) (cfg.Cmd, error) {
+	c := &cmd{}
+	if err := c.parseArgs(args); err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+func (*cmdProvider) Help() string {
+	return `	shows details to a processor
+	
+	parameters:
+	m	method of the processor (string)
+	p	processor name (string)
+	c	display the details of configuration (bool)
+	r	display the result of a method (bool)
+	`
 }

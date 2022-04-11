@@ -1,5 +1,7 @@
 package schema
 
+import "fmt"
+
 type SchemaType uint
 
 type SchemaDefaultFunc interface{}
@@ -20,7 +22,7 @@ type Schema struct {
 	Optional     bool
 	Required     bool
 	DefaultValue interface{}
-	DefaultFunc  SchemaDefaultFunc
+	DefaultFunc  SchemaDefaultFunc `json:"-"`
 	Description  string
 	Elem         map[string]*Schema
 	ElemType     SchemaType
@@ -42,5 +44,13 @@ func (st SchemaType) String() string {
 		return v
 	} else {
 		return "Undefined"
+	}
+}
+
+func (st SchemaType) MarshalJSON() ([]byte, error) {
+	if str, ok := schemaTypeString[st]; ok {
+		return []byte(fmt.Sprintf("\"%s\"", str)), nil
+	} else {
+		return []byte(fmt.Sprintf("\"unknown schematype %d\"", st)), nil
 	}
 }

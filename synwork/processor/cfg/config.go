@@ -18,7 +18,7 @@ type Config struct {
 	ProgramExt string
 }
 
-func ParseArgs(cmds []string) ([]string, *Config, error) {
+func ParseArgs_(cmds []string) ([]string, *Config, error) {
 	prgs := map[string]struct{}{}
 	posCmd := 0
 	for _, a := range cmds {
@@ -48,10 +48,15 @@ func parseConfig(args []string) (*Config, error) {
 	fs := flag.NewFlagSet("general", flag.ExitOnError)
 	fs.StringVar(&cfg.WorkDir, "f", ".", "directory with configuration")
 	fs.IntVar(&cfg.PortFrom, "pf", 50000, "start evaluation for free ports")
-	fs.IntVar(&cfg.PortTo, "pt", 60000, "start evaluation for free ports")
-	err := fs.Parse(args)
-	if err != nil {
-		return nil, err
+	fs.IntVar(&cfg.PortTo, "pt", 60000, "end evaluation for free ports")
+	if len(args) > 0 {
+		if err := fs.Parse(args[1:]); err != nil {
+			return nil, err
+		} else if err = cfg.evalOsArch(); err != nil {
+			return nil, err
+		} else if err = cfg.evalCacheDir(); err != nil {
+			return nil, err
+		}
 	}
 	return cfg, nil
 }
