@@ -18,6 +18,7 @@ type (
 		Method string
 		Config bool
 		Result bool
+		All    bool
 		config *cfg.Config
 	}
 	cmdProvider struct {
@@ -49,7 +50,14 @@ func (c *cmd) Exec() error {
 		}
 	} else {
 		if item, ok := pluginsMap[c.Plugin]; ok {
-			if c.Method == "" && !c.Config {
+			if c.All {
+				fmt.Printf("processor: %s\n", c.Plugin)
+				fmt.Println("Description:")
+				fmt.Println(item.Provider.Description)
+				for k, v := range item.Provider.MethodMap {
+					c.printConfiguration(k, v, true, true)
+				}
+			} else if c.Method == "" && !c.Config {
 				fmt.Println(c.Plugin)
 				fmt.Println("Methods:")
 				for k, m := range item.Provider.MethodMap {
@@ -64,21 +72,7 @@ func (c *cmd) Exec() error {
 				fmt.Println(formatSchema(item.Provider.Schema))
 			} else if c.Method != "" {
 				if method, ok := item.Provider.MethodMap[c.Method]; ok {
-					if c.Config {
-						fmt.Println(c.Plugin, "-", c.Method)
-						fmt.Println("Configuration")
-						fmt.Println(formatSchema(method.Schema))
-					}
-					if c.Result {
-						fmt.Println(c.Plugin, "-", c.Method)
-						fmt.Println("Result")
-						fmt.Println(formatSchema(method.Result))
-					}
-					if !c.Result && !c.Config {
-						fmt.Println(c.Plugin, "-", c.Method)
-						fmt.Println("Description")
-						fmt.Println(method.Description)
-					}
+					c.printConfiguration(c.Method, method, c.Config, c.Result)
 				}
 			}
 		} else {
@@ -88,12 +82,32 @@ func (c *cmd) Exec() error {
 	return nil
 }
 
+func (c *cmd) printConfiguration(name string, method *schema.Method, config bool, result bool) {
+	if c.Config {
+		fmt.Printf("%s->%s\n", c.Plugin, name)
+		fmt.Println("Configuration")
+		fmt.Println(formatSchema(method.Schema))
+	}
+	if config {
+		fmt.Printf("%s->%s\n", c.Plugin, name)
+		fmt.Println("Description")
+		fmt.Println(method.Description)
+	}
+	if result {
+		fmt.Printf("%s->%s\n", c.Plugin, name)
+		fmt.Println("Result")
+		fmt.Println(formatSchema(method.Result))
+	}
+
+}
+
 func (c *cmd) parseArgs(args []string) error {
 	fs := flag.NewFlagSet("initialize", flag.PanicOnError)
 	fs.StringVar(&c.Method, "m", "", "method of the plugin")
 	fs.StringVar(&c.Plugin, "p", "", "processor")
 	fs.BoolVar(&c.Config, "c", false, "display the details of configuration")
 	fs.BoolVar(&c.Result, "r", false, "display the result of a method")
+	fs.BoolVar(&c.All, "a", false, "display all details for all methods and configuration")
 	return fs.Parse(args)
 }
 
@@ -154,5 +168,6 @@ func (*cmdProvider) Help() string {
 	p	processor name (string)
 	c	display the details of configuration (bool)
 	r	display the result of a method (bool)
+	a	display all details for all methods and configuration (bool)
 	`
 }
