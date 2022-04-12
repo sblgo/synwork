@@ -33,6 +33,8 @@ func (ep *ExecPlan) dumpItem(ec *ExecContext, epn *ExecPlanNode, indent string) 
 		ec.Log.Printf("%scall%s METHOD %s->%s (%s) ", indent, dublicateFlag, epn.Method.Instance, epn.Method.Name, strings.Replace(epn.Method.Id, "method/", "", 0))
 	} else if epn.Processor != nil {
 		ec.Log.Printf("%sinit%s PROCESSOR %s (%s) ", indent, dublicateFlag, epn.Processor.PluginName, strings.Replace(epn.Processor.Id, "processor/", "", 0))
+	} else if epn.Variable != nil {
+		ec.Log.Printf("%suse%s VARIABLE %s", indent, dublicateFlag, strings.Replace(epn.Variable.Id, "variable/", "", 0))
 	}
 	return nil
 }

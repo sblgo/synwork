@@ -65,6 +65,12 @@ type helpCmdProvider struct {
 func (hc *helpCmdProvider) Help() string {
 	return `
 	use: synwork help <cmd>
+
+	synwork <snw-parameters< <cmd> <cmd-parameters>
+	parameters for synwork:
+	f	directory with one or more *.snw files
+	pf	port from, lower range for communication with processors
+	pt	port to, higher range for communication with processors
 	`
 }
 

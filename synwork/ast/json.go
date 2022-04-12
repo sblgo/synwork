@@ -38,7 +38,7 @@ func MapSchemaAndNode2(sma map[string]*schema.Schema, n BlockContentNode) (map[s
 			case *ReferenceValue:
 			}
 		} else {
-			return nil, nil, fmt.Errorf("[%s - %s] invalid key %s ", n.Begin, n.End, i.Identifier)
+			return nil, nil, fmt.Errorf("[%s - %s] invalid key %s (MapSchemaAndNode2.1)", n.Begin, n.End, i.Identifier)
 		}
 	}
 	for _, i := range n.Blocks {
@@ -63,7 +63,7 @@ func MapSchemaAndNode2(sma map[string]*schema.Schema, n BlockContentNode) (map[s
 				}
 			}
 		} else {
-			return nil, nil, fmt.Errorf("[%s - %s] invalid key %s ", n.Begin, n.End, i.Type)
+			return nil, nil, fmt.Errorf("[%s - %s] invalid key %s (MapSchemaAndNode2.2)", n.Begin, n.End, i.Type)
 		}
 	}
 	for k, s := range sma {

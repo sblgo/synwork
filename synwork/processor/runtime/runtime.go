@@ -115,6 +115,8 @@ func initVariable(r *Runtime) error {
 			var name string
 			if len(b.Identifiers) != 1 {
 				return fmt.Errorf("name of variable isn't exact defined %s", b.Pos())
+			} else {
+				name = b.Identifiers[0]
 			}
 			if obj, err := MapSchemaAndNode(VariableSchema, *b.Content); err != nil {
 				return err
@@ -122,7 +124,7 @@ func initVariable(r *Runtime) error {
 				if _, ok := r.variables[name]; ok {
 					return fmt.Errorf("variable %s always defined before %s", name, b.Pos())
 				}
-				variable := NewVariable(name, obj)
+				variable := NewVariable(name, b.Pos(), obj)
 				r.variables[name] = variable
 			}
 		}
@@ -285,6 +287,7 @@ func buildExecPlan(r *Runtime) error {
 	ep := &ExecPlan{
 		Processor:     map[string]*ExecPlanNode{},
 		TargetMethods: map[string]*ExecPlanNode{},
+		Variables:     map[string]*ExecPlanNode{},
 	}
 	for _, p := range r.processors {
 		ep.AddProcessor(p)
@@ -292,6 +295,9 @@ func buildExecPlan(r *Runtime) error {
 	}
 	for _, m := range r.methods {
 		ep.AddMethod(m)
+	}
+	for _, v := range r.variables {
+		ep.AddVariable(v)
 	}
 	err := ep.Build()
 	if err != nil {
@@ -320,13 +326,15 @@ func (r *Runtime) Dump(ctx context.Context) error {
 	return err
 }
 
-func (r *Runtime) Exec(ctx context.Context) error {
+func (r *Runtime) Exec(ctx context.Context, params map[string]string) error {
 
 	ctx2 := &ExecContext{
 		Context:      ctx,
 		RuntimeNodes: map[string]*ExecRuntimeNode{},
 		Log:          *log.New(os.Stderr, "[SYNWORK-EXEC]", log.Ltime),
+		Parameters:   params,
 	}
+
 	err := r.execPlan.Exec(ctx2)
 	return err
 }

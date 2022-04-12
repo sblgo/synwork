@@ -18,6 +18,12 @@ processor "csv" "csv01" {
 
 }
 
+variable "file" {
+    type = "string"
+    default = "random.csv"
+    param-name = "var1"
+}
+
 method "random_list" "test01" "list01" {
     min_id = -120
     max_id = 100
@@ -27,7 +33,7 @@ method "random_list" "test01" "list01" {
 
 method "write" "csv01" "csv_file01" {
     data = $method.list01.result
-    file_name = "random.csv"
+    file_name = $variable.file
     column {
         path = "id"
         format = "%05d"

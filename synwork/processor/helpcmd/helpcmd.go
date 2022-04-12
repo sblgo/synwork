@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"encoding/xml"
 	"flag"
 	"fmt"
 
@@ -19,9 +20,23 @@ type (
 		Config bool
 		Result bool
 		All    bool
+		Xml    bool
 		config *cfg.Config
 	}
 	cmdProvider struct {
+	}
+
+	DtProcessor struct {
+		Name        string
+		Description string
+		Method      []DtMethod
+	}
+
+	DtMethod struct {
+		Name          string
+		Description   string
+		Configuration string
+		Result        string
 	}
 )
 
@@ -50,7 +65,9 @@ func (c *cmd) Exec() error {
 		}
 	} else {
 		if item, ok := pluginsMap[c.Plugin]; ok {
-			if c.All {
+			if c.Xml {
+				c.printXmlDetails(c.Plugin, &item.Provider)
+			} else if c.All {
 				fmt.Printf("processor: %s\n", c.Plugin)
 				fmt.Println("Description:")
 				fmt.Println(item.Provider.Description)
@@ -82,6 +99,27 @@ func (c *cmd) Exec() error {
 	return nil
 }
 
+func (c *cmd) printXmlDetails(name string, pl *schema.Processor) {
+	dt := DtProcessor{
+		Name:        name,
+		Description: pl.Description,
+		Method:      []DtMethod{},
+	}
+	for k, v := range pl.MethodMap {
+		dt.Method = append(dt.Method, DtMethod{
+			Name:          k,
+			Description:   v.Description,
+			Configuration: formatSchema(v.Schema),
+			Result:        formatSchema(v.Result),
+		})
+	}
+	b := new(bytes.Buffer)
+	enc := xml.NewEncoder(b)
+	enc.Indent("", "  ")
+	enc.Encode(dt)
+	fmt.Println(b.String())
+}
+
 func (c *cmd) printConfiguration(name string, method *schema.Method, config bool, result bool) {
 	if c.Config {
 		fmt.Printf("%s->%s\n", c.Plugin, name)
@@ -108,6 +146,7 @@ func (c *cmd) parseArgs(args []string) error {
 	fs.BoolVar(&c.Config, "c", false, "display the details of configuration")
 	fs.BoolVar(&c.Result, "r", false, "display the result of a method")
 	fs.BoolVar(&c.All, "a", false, "display all details for all methods and configuration")
+	fs.BoolVar(&c.Xml, "x", false, "display all details for one processor in xml format")
 	return fs.Parse(args)
 }
 

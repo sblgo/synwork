@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"strings"
 	"sync"
@@ -14,6 +15,7 @@ type ExecContext struct {
 	RuntimeNodes map[string]*ExecRuntimeNode
 	Log          log.Logger
 	Error        error
+	Parameters   map[string]string
 }
 
 type ExecRuntimeNode struct {
@@ -73,6 +75,8 @@ func (ern *ExecRuntimeNode) executeNode(ec *ExecContext) (err error) {
 		ern.once.Do(func() { err = ern.executeMethod(ec) })
 	} else if ern.PlanNode.Processor != nil {
 		ern.once.Do(func() { err = ern.executeProcessor(ec) })
+	} else if ern.PlanNode.Variable != nil {
+		ern.once.Do(func() { err = ern.executeVariable(ec) })
 	}
 	return
 }
@@ -111,6 +115,31 @@ func (ern *ExecRuntimeNode) executeProcessor(ec *ExecContext) error {
 	return err
 }
 
+func (ern *ExecRuntimeNode) executeVariable(ec *ExecContext) error {
+	runtimeObj := ern.PlanNode.Variable.objectData
+	objData, err := ern.createObjectData(ec, runtimeObj)
+	if err != nil {
+		ec.Log.Printf("%s [%s->get] prepare error %s", ern.PlanNode.Id, ern.PlanNode.Variable.Id, err.Error())
+		return err
+	}
+	value, err := ern.PlanNode.Variable.Eval(ec, objData)
+	if err != nil {
+		ec.Log.Printf("%s [%s->get] error %s", ern.PlanNode.Id, ern.PlanNode.Variable.Id, err.Error())
+		return err
+	} else {
+		ec.Log.Printf("%s [%s->get] done", ern.PlanNode.Id, ern.PlanNode.Variable.Id)
+	}
+	if value == nil {
+		err = fmt.Errorf("missing value for variable")
+		ec.Log.Printf("%s [%s->get] error %s", ern.PlanNode.Id, ern.PlanNode.Variable.Id, err.Error())
+		return err
+	}
+	ern.Result = map[string]interface{}{
+		"var": value,
+	}
+	return err
+}
+
 func (ern *ExecRuntimeNode) createObjectData(ec *ExecContext, runObj *RuntimeObject) (map[string]interface{}, error) {
 	newValue := schema.MapCopy(runObj.Value)
 	objData := newValue
@@ -129,6 +158,13 @@ func (ern *ExecRuntimeNode) createObjectData(ec *ExecContext, runObj *RuntimeObj
 				}
 			}
 		case ReferenceTypeVariable:
+			id := ref.Type.Id(ref.Key)
+			if rn, ok := ec.RuntimeNodes[id]; ok {
+				if newVal, ok := rn.Result["var"]; ok {
+					tgtPath := strings.Split(strings.Trim(ref.Location, "/"), "/")
+					schema.SetValueMap(newValue, tgtPath, newVal)
+				}
+			}
 		case ReferenceTypeEnvironment:
 		}
 
