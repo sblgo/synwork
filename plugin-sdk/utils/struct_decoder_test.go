@@ -1,7 +1,9 @@
 package utils
 
-import "testing"
-import "fmt"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestDecoderDecode01(t *testing.T) {
 	type (
@@ -40,4 +42,26 @@ func TestDecoderDecode01(t *testing.T) {
 	dec := NewDecoder()
 	dec.Decode(&d, source)
 	fmt.Printf("decode %#v\n", d)
+}
+
+func TestDecoderDecode02(t *testing.T) {
+	type (
+		Data struct {
+			Name string
+		}
+	)
+	datas := make([]Data, 0)
+	source := []interface{}{
+		map[string]interface{}{
+			"name": "a1",
+		},
+		map[string]interface{}{
+			"name": "b1",
+		},
+	}
+	err := NewDecoder().Decode(&datas, source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Printf("decode %#v\n", datas)
 }

@@ -24,7 +24,8 @@ func (d *Decoder) Decode(t interface{}, source interface{}) error {
 	return d.convertReflectIn(reflectVal, source)
 }
 
-func (d *Decoder) convertReflectIn(reflectVal reflect.Value, source interface{}) error {
+func (d *Decoder) convertReflectIn(reflectValIn reflect.Value, source interface{}) error {
+	reflectVal := reflectValIn
 	if reflectVal.Kind() == reflect.Ptr {
 		reflectVal = reflectVal.Elem()
 	}
@@ -33,9 +34,27 @@ func (d *Decoder) convertReflectIn(reflectVal reflect.Value, source interface{})
 		if sourceMap, ok := source.(map[string]interface{}); ok {
 			return d.sub(reflectVal).convertReflectStruct(reflectVal, sourceMap)
 		}
-	case reflect.Array:
-
+	case reflect.Array, reflect.Slice:
+		requiredElement := true
+		elemType := reflectVal.Type().Elem()
+		if elemType.Kind() == reflect.Ptr {
+			elemType = elemType.Elem()
+			requiredElement = false
+		}
+		if sourceArr, ok := source.([]interface{}); ok {
+			for _, sourceArrItem := range sourceArr {
+				subReflectVal := reflect.New(elemType)
+				d.sub(subReflectVal).convertReflectIn(subReflectVal, sourceArrItem)
+				if requiredElement {
+					reflectVal = reflect.Append(reflectVal, subReflectVal.Elem())
+				} else {
+					reflectVal = reflect.Append(reflectVal, subReflectVal)
+				}
+			}
+		}
+		reflectValIn.Elem().Set(reflectVal)
 	}
+
 	return nil
 }
 
