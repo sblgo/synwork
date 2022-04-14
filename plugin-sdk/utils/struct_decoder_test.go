@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 )
@@ -41,7 +42,8 @@ func TestDecoderDecode01(t *testing.T) {
 	}
 	dec := NewDecoder()
 	dec.Decode(&d, source)
-	fmt.Printf("decode %#v\n", d)
+	fmt.Printf("decode01 %#v\n", d)
+	fmt.Printf("decode01 %#v\n", *d.Properties[0])
 }
 
 func TestDecoderDecode02(t *testing.T) {
@@ -64,4 +66,42 @@ func TestDecoderDecode02(t *testing.T) {
 		t.Fatal(err)
 	}
 	fmt.Printf("decode %#v\n", datas)
+}
+
+type (
+	Data01Test03 struct {
+		When []Data02Test03
+	}
+	Data02Test03 struct {
+		Name string
+	}
+)
+
+func (d *Data02Test03) UnmarshallStruct(v interface{}) error {
+
+	return nil
+}
+
+func TestDecodeDecode03(t *testing.T) {
+	_json := `{
+		"when": [
+			{
+				"name1":"name1"
+			},
+			{
+				"name2":"name2"
+			}
+		]
+	}`
+	_jsonRaw := map[string]interface{}{}
+	err := json.Unmarshal([]byte(_json), &_jsonRaw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data := Data01Test03{}
+	err = NewDecoder().Decode(&data, _jsonRaw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Printf("decode03 %#v\n", data)
 }

@@ -3,13 +3,29 @@ package utils
 import (
 	"fmt"
 	"reflect"
+	"strings"
 )
 
-type Decoder struct {
-	tagName        string
-	fieldNameToPos map[string]int
-	camel          UnderscoreEnc
-}
+type (
+	Decoder struct {
+		tagName        string
+		fieldNameToPos map[string]int
+		camel          UnderscoreEnc
+	}
+
+	Unmarshaller interface {
+		UnmarshallStruct(v interface{}) error
+	}
+
+	decoder struct {
+		Decoder        *Decoder
+		parent         *decoder
+		fieldNameToPos map[string]int
+		name           string
+	}
+)
+
+var unmarshallerType = reflect.TypeOf((*Unmarshaller)(nil)).Elem()
 
 func NewDecoder() *Decoder {
 	return &Decoder{
@@ -20,11 +36,14 @@ func NewDecoder() *Decoder {
 }
 
 func (d *Decoder) Decode(t interface{}, source interface{}) error {
+	hd := &decoder{
+		Decoder: d,
+	}
 	reflectVal := reflect.ValueOf(t)
-	return d.convertReflectIn(reflectVal, source)
+	return hd.convertReflectIn(reflectVal, source)
 }
 
-func (d *Decoder) convertReflectIn(reflectValIn reflect.Value, source interface{}) error {
+func (d *decoder) convertReflectIn(reflectValIn reflect.Value, source interface{}) error {
 	reflectVal := reflectValIn
 	if reflectVal.Kind() == reflect.Ptr {
 		reflectVal = reflectVal.Elem()
@@ -32,7 +51,13 @@ func (d *Decoder) convertReflectIn(reflectValIn reflect.Value, source interface{
 	switch reflectVal.Kind() {
 	case reflect.Struct:
 		if sourceMap, ok := source.(map[string]interface{}); ok {
-			return d.sub(reflectVal).convertReflectStruct(reflectVal, sourceMap)
+			if reflectVal.Addr().Type().Implements(unmarshallerType) {
+				if err := reflectVal.Addr().Interface().(Unmarshaller).UnmarshallStruct(sourceMap); err != nil {
+					return err
+				}
+			} else {
+				return d.sub(reflectVal).convertReflectStruct(reflectVal, sourceMap)
+			}
 		}
 	case reflect.Array, reflect.Slice:
 		requiredElement := true
@@ -44,7 +69,9 @@ func (d *Decoder) convertReflectIn(reflectValIn reflect.Value, source interface{
 		if sourceArr, ok := source.([]interface{}); ok {
 			for _, sourceArrItem := range sourceArr {
 				subReflectVal := reflect.New(elemType)
-				d.sub(subReflectVal).convertReflectIn(subReflectVal, sourceArrItem)
+				if err := d.sub(subReflectVal).convertReflectIn(subReflectVal, sourceArrItem); err != nil {
+					return err
+				}
 				if requiredElement {
 					reflectVal = reflect.Append(reflectVal, subReflectVal.Elem())
 				} else {
@@ -58,15 +85,16 @@ func (d *Decoder) convertReflectIn(reflectValIn reflect.Value, source interface{
 	return nil
 }
 
-func (d *Decoder) sub(modelReflect reflect.Value) *Decoder {
-	return &Decoder{
+func (d *decoder) sub(modelReflect reflect.Value) *decoder {
+	return &decoder{
+		parent:         d,
+		Decoder:        d.Decoder,
 		fieldNameToPos: make(map[string]int),
-		camel:          d.camel,
-		tagName:        d.tagName,
+		name:           modelReflect.String(),
 	}
 }
 
-func (d *Decoder) convertReflectStruct(modelReflect reflect.Value, sourceMap map[string]interface{}) error {
+func (d *decoder) convertReflectStruct(modelReflect reflect.Value, sourceMap map[string]interface{}) error {
 	if modelReflect.Kind() == reflect.Ptr {
 		modelReflect = modelReflect.Elem()
 	}
@@ -74,20 +102,24 @@ func (d *Decoder) convertReflectStruct(modelReflect reflect.Value, sourceMap map
 	fieldsCount := modelReflect.NumField()
 
 	for i := 0; i < fieldsCount; i++ {
-		fieldName := d.camel.ConvertFieldName(modelRefType.Field(i), d.tagName)
+		fieldName := d.Decoder.camel.ConvertFieldName(modelRefType.Field(i), d.Decoder.tagName)
+		d.fieldNameToPos[fieldName] = i
+		fieldName = strings.ReplaceAll(fieldName, "_", "-")
 		d.fieldNameToPos[fieldName] = i
 	}
 	for key, value := range sourceMap {
 		if fieldIdx, ok := d.fieldNameToPos[key]; !ok {
 			return fmt.Errorf("missing field %s in structure %s", key, modelReflect.Type().Name())
 		} else {
-			d.setReflectValue(modelReflect.Field(fieldIdx), value)
+			if err := d.setReflectValue(modelReflect.Field(fieldIdx), value); err != nil {
+				return CompError(err, " for key %s", key)
+			}
 		}
 	}
 	return nil
 }
 
-func (d *Decoder) setReflectValue(modelReflect reflect.Value, value interface{}) error {
+func (d *decoder) setReflectValue(modelReflect reflect.Value, value interface{}) error {
 	// setter := func(v reflect.Value) {
 	// 	modelReflect.Set(v)
 	// }
@@ -97,7 +129,13 @@ func (d *Decoder) setReflectValue(modelReflect reflect.Value, value interface{})
 	switch modelReflect.Kind() {
 	case reflect.Struct:
 		if valueMap, ok := value.(map[string]interface{}); ok {
-			return d.sub(modelReflect).convertReflectStruct(modelReflect, valueMap)
+			if modelReflect.Addr().Type().Implements(unmarshallerType) {
+				if err := modelReflect.Addr().Interface().(Unmarshaller).UnmarshallStruct(valueMap); err != nil {
+					return err
+				}
+			} else {
+				return d.sub(modelReflect).convertReflectStruct(modelReflect, valueMap)
+			}
 		}
 	case reflect.Array, reflect.Slice:
 		if valueArr, ok := value.([]interface{}); ok {

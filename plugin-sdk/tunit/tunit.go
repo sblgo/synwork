@@ -45,6 +45,10 @@ func CallMockMethod(t *testing.T, mm MethodMock, defs string) map[string]interfa
 				t.Fatalf("method %s for processor %s of type %s has wrong definition. (%s)", methodName, instanceName, "<testplugin>", err.Error())
 			}
 			dataMap, err := createObjectData(mm, runtimeObj)
+			if err != nil {
+				t.Fatalf("method %s for processor %s of type %s has wrong reference. (%s)", methodName, instanceName, "<testplugin>", err.Error())
+			}
+
 			results := map[string]interface{}{}
 
 			data := schema.NewMethodData(*schema.NewObjectData(methodDef.Schema, dataMap), *schema.NewObjectData(methodDef.Result, results))

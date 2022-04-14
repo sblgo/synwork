@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"sbl.systems/go/synwork/plugin-sdk/schema"
+	"sbl.systems/go/synwork/plugin-sdk/utils"
 	"sbl.systems/go/synwork/synwork/ast"
 )
 
@@ -35,7 +36,7 @@ func mapSchemaAndNode(path string, sma map[string]*schema.Schema, n ast.BlockCon
 					list := value[i.Identifier].([]interface{})
 					obj, ref2, err := mapSchemaAndNode(fmt.Sprintf("%s/%d/%s", path, len(list), i.Identifier), s.Elem, v.BlockContentNode)
 					if err != nil {
-						return nil, nil, err
+						return nil, nil, utils.CompError(err, "invalid value for %s (at %s - %s)", i.Identifier, i.Begin, i.End)
 					}
 					references = append(references, ref2...)
 					list = append(list, obj)
@@ -43,7 +44,7 @@ func mapSchemaAndNode(path string, sma map[string]*schema.Schema, n ast.BlockCon
 				case schema.TypeMap:
 					obj, ref2, err := mapSchemaAndNode(fmt.Sprintf("%s/%s", path, i.Identifier), s.Elem, v.BlockContentNode)
 					if err != nil {
-						return nil, nil, err
+						return nil, nil, utils.CompError(err, "invalid value for %s (at %s - %s)", i.Identifier, i.Begin, i.End)
 					}
 					references = append(references, ref2...)
 					if _, ok := value[i.Identifier]; !ok {
@@ -53,7 +54,7 @@ func mapSchemaAndNode(path string, sma map[string]*schema.Schema, n ast.BlockCon
 			case *ast.ReferenceValue:
 				ref, err := NewReference(v.RefParts[0], v.RefParts[1:], fmt.Sprintf("%s/%s", path, i.Identifier), *s)
 				if err != nil {
-					return nil, nil, err
+					return nil, nil, utils.CompError(err, "invalid reference for %s (at %s - %s)", i.Identifier, i.Begin, i.End)
 				}
 				value[i.Identifier] = ref
 				references = append(references, ref)
@@ -73,7 +74,7 @@ func mapSchemaAndNode(path string, sma map[string]*schema.Schema, n ast.BlockCon
 				list := value[key].([]interface{})
 				obj, ref, err := mapSchemaAndNode(fmt.Sprintf("%s/%s/%d", path, key, len(list)), s.Elem, *i.Content)
 				if err != nil {
-					return nil, nil, err
+					return nil, nil, utils.CompError(err, "invalid value (at %s - %s)", i.Begin, i.End)
 				}
 				references = append(references, ref...)
 				list = append(list, obj)
@@ -81,7 +82,7 @@ func mapSchemaAndNode(path string, sma map[string]*schema.Schema, n ast.BlockCon
 			case schema.TypeMap:
 				obj, ref, err := mapSchemaAndNode(fmt.Sprintf("%s/%s", path, key), s.Elem, *i.Content)
 				if err != nil {
-					return nil, nil, err
+					return nil, nil, utils.CompError(err, "invalid value (at %s - %s)", i.Begin, i.End)
 				}
 				references = append(references, ref...)
 				if _, ok := value[key]; !ok {
@@ -159,7 +160,7 @@ func (m *mapSchemaIn) mapMapValue() error {
 			inValue: m.inMapValue[subName],
 		}
 		if err := cm.mapValues(); err != nil {
-			return err
+			return utils.CompError(err, "field '%s'", subName)
 		}
 		newValue[subName] = cm.outValue
 	}
@@ -171,6 +172,8 @@ func (m *mapSchemaIn) mapMapValue() error {
 func (m *mapSchemaIn) mapListValue() error {
 	if l, ok := m.inValue.([]interface{}); ok {
 		m.inArrValue = l
+	} else if m.inValue == nil {
+		return nil
 	} else {
 		return fmt.Errorf("expected list but get it isn't a list")
 	}
@@ -187,7 +190,7 @@ func (m *mapSchemaIn) mapListValue() error {
 					inValue: inMapValue[subName],
 				}
 				if err := cm.mapValues(); err != nil {
-					return err
+					return utils.CompError(err, "field '%s'", subName)
 				}
 				newValue[subName] = cm.outValue
 			}
