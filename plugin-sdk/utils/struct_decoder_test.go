@@ -105,3 +105,37 @@ func TestDecodeDecode03(t *testing.T) {
 	}
 	fmt.Printf("decode03 %#v\n", data)
 }
+
+func TestDecodeDecode04(t *testing.T) {
+	type (
+		BusinessComponentID struct {
+			PartyID     string `snw:"party-id"`
+			ComponentID string `snw:"component-id"`
+		}
+		Component struct {
+			BusinessComponentID *BusinessComponentID `snw:"business-component-id"`
+			Description         string
+		}
+	)
+	_json := `
+		{
+			"description": "test04",
+			"business-component-id" : {
+				"party-id" : "party01",
+				"component-id": "component01"
+			}
+		}
+	`
+	_jsonRaw := map[string]interface{}{}
+	err := json.Unmarshal([]byte(_json), &_jsonRaw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data := new(Component)
+	err = NewDecoder().Decode(&data, _jsonRaw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Printf("decode04 %#v\n", *data.BusinessComponentID)
+
+}

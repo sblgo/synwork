@@ -26,7 +26,10 @@ func (e *Encoder) Encode(obj interface{}) (interface{}, error) {
 func (e *Encoder) convertToIn(model interface{}) interface{} {
 	modelReflect := reflect.ValueOf(model)
 
-	if modelReflect.Kind() == reflect.Ptr {
+	if modelReflect.Kind() == reflect.Pointer {
+		if modelReflect.IsNil() {
+			return nil
+		}
 		modelReflect = modelReflect.Elem()
 	}
 	return e.convertReflectValue(modelReflect)

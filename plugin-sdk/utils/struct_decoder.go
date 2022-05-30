@@ -45,7 +45,10 @@ func (d *Decoder) Decode(t interface{}, source interface{}) error {
 
 func (d *decoder) convertReflectIn(reflectValIn reflect.Value, source interface{}) error {
 	reflectVal := reflectValIn
-	if reflectVal.Kind() == reflect.Ptr {
+	if reflectVal.Kind() == reflect.Pointer {
+		reflectVal = reflectVal.Elem()
+	}
+	if reflectVal.Kind() == reflect.Pointer {
 		reflectVal = reflectVal.Elem()
 	}
 	switch reflectVal.Kind() {
@@ -119,11 +122,13 @@ func (d *decoder) convertReflectStruct(modelReflect reflect.Value, sourceMap map
 	return nil
 }
 
-func (d *decoder) setReflectValue(modelReflect reflect.Value, value interface{}) error {
-	// setter := func(v reflect.Value) {
-	// 	modelReflect.Set(v)
-	// }
-	if modelReflect.Kind() == reflect.Ptr {
+func (d *decoder) setReflectValue(modelReflectIn reflect.Value, value interface{}) error {
+	modelReflect := modelReflectIn
+	if modelReflect.Kind() == reflect.Pointer && modelReflect.IsNil() {
+		modelReflect = reflect.New(modelReflect.Type().Elem())
+		modelReflectIn.Set(modelReflect)
+		modelReflect = modelReflectIn.Elem()
+	} else if modelReflect.Kind() == reflect.Pointer {
 		modelReflect = modelReflect.Elem()
 	}
 	switch modelReflect.Kind() {
@@ -249,4 +254,8 @@ func toInt64(value interface{}) (int64, bool) {
 		return 0, false
 	}
 
+}
+
+func DecodeSchemaData(target interface{}, source interface{}) error {
+	return NewDecoder().Decode(target, source)
 }

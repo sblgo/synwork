@@ -85,7 +85,7 @@ func (ern *ExecRuntimeNode) executeMethod(ec *ExecContext) error {
 	runtimeObj := ern.PlanNode.Method.Data
 	objData, err := ern.createObjectData(ec, runtimeObj)
 	if err != nil {
-		ec.Log.Printf("%s [%s->%s] prepare error %s", ern.PlanNode.Id, ern.PlanNode.Processor.plugin.name, ern.PlanNode.Method.Name, err.Error())
+		ec.Log.Printf("%s [%s->%s] prepare error %s", ern.PlanNode.Id, ern.PlanNode.Method.Processor.PluginName, ern.PlanNode.Method.Name, err.Error())
 		return err
 	}
 	result, err := ern.PlanNode.Method.Plugin.Call(ern.PlanNode.Method.Instance, ern.PlanNode.Method.Name, objData)

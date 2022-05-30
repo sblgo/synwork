@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"fmt"
+	"strings"
 
 	"sbl.systems/go/synwork/plugin-sdk/schema"
 	"sbl.systems/go/synwork/plugin-sdk/utils"
@@ -60,7 +61,11 @@ func mapSchemaAndNode(path string, sma map[string]*schema.Schema, n ast.BlockCon
 				references = append(references, ref)
 			}
 		} else {
-			return nil, nil, fmt.Errorf("[%s - %s] invalid key %s (mapSchemaAndNode2.1)", n.Begin, n.End, i.Identifier)
+			keys := []string{}
+			for k := range sma {
+				keys = append(keys, k)
+			}
+			return nil, nil, fmt.Errorf("[%s - %s] invalid key %s in object expected keys [%s](mapSchemaAndNode2.1)", n.Begin, n.End, i.Identifier, strings.Join(keys, ", "))
 		}
 	}
 	for _, i := range n.Blocks {

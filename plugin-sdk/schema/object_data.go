@@ -91,6 +91,8 @@ func getMap(sma map[string]*Schema, value map[string]interface{}, path []string)
 		} else {
 			return nil
 		}
+	} else if len(path) == 0 {
+		return value
 	}
 	return nil
 }
